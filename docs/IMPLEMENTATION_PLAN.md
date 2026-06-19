@@ -1,0 +1,203 @@
+# DualNAM implementation plan
+
+## Product target
+
+DualNAM is a local macOS audio effect built from the official Neural Amp Modeler
+plug-in:
+
+- formats: VST3 and Audio Unit v2;
+- input: one stereo signal carrying two independently routed guitar channels;
+- model slots: two independent `.nam` files, A and B;
+- routing: left input feeds model A and right input feeds model B;
+- output: model A is the left channel and model B is the right channel;
+- controls for the first usable version:
+  - input gain;
+  - model A gain;
+  - model B gain;
+  - output gain;
+  - load/clear model A;
+  - load/clear model B.
+
+The product name is **DualNAM**. “NAM” means Neural Amp Modeler; it is not
+related to the NAMM trade show.
+
+## Assumptions for version 1
+
+- The plug-in requires a stereo input bus and a stereo output bus.
+- Left and right inputs remain independent throughout the first version:
+  - input left feeds model A;
+  - input right feeds model B.
+- Gig Performer is responsible for duplicating or otherwise preparing a mono
+  guitar source into the two input channels when dual-mono operation is
+  required.
+- Both model slots use independent NAM DSP instances, including independent
+  resampling state.
+- If one slot is empty, that output channel is silent. This is safer than
+  passing dry guitar on one side.
+- Model A and model B remain hard-panned. No pan or blend control is included.
+- The first version excludes IR loading, EQ, noise gate, model slimming,
+  standalone app, AAX, AUv3, and capture/training. These can be reconsidered
+  after the dual-model plug-in is stable.
+- “Independent mono” use means a host may route each input and output channel
+  separately.
+- A later input-mode switch is planned:
+  - **Stereo:** left to model A and right to model B;
+  - **Mono:** one mono source duplicated into both models.
+  The exact mono source rule (left input, right input, or stereo sum) will be
+  chosen before that switch is implemented.
+
+## Upstream baseline
+
+The workspace is cloned recursively from:
+
+- plug-in: <https://github.com/sdatkinson/NeuralAmpModelerPlugin>
+- DSP core: <https://github.com/sdatkinson/NeuralAmpModelerCore>
+
+Baseline checked on June 19, 2026:
+
+- NeuralAmpModelerPlugin `0.7.15`, commit
+  `96337e9ab6e3beb619459779bbb5c47e1b04d8c4`;
+- NeuralAmpModelerCore `0.5.3`, submodule commit
+  `9c7b185de346fe0725dea537bcee4bc38b5bb6d6`.
+
+The plug-in repository already contains the correct iPlug2 project and pins the
+core, Eigen, and AudioDSPTools dependencies as submodules. Maintaining those
+submodule pins is simpler and less risky than creating a new plug-in framework.
+
+## Proposed processing graph
+
+```text
+stereo host input
+       |                 |
+ input left          input right
+       |                 |
+  input gain          input gain
+       |                 |
+ NAM model A        NAM model B
+       |                 |
+    A gain             B gain
+       |                 |
+ left output        right output
+       \                 /
+          output gain
+```
+
+No allocation, model loading, file I/O, or locks may occur in the audio
+processing callback. Each model is loaded into a staging pointer off the active
+audio path and swapped into its slot at a block boundary, following the current
+upstream design.
+
+## Reviewable increments
+
+### 1. Establish a buildable upstream baseline
+
+- Install full Xcode and accept its license.
+- Download iPlug2's pinned VST3 SDK and prebuilt graphics libraries.
+- Build the unmodified upstream VST3 and AU targets.
+- Validate that both bundles are produced in the user's audio plug-in folders.
+
+Exit condition: the unmodified upstream source builds locally.
+
+### 2. Add dual-model DSP routing without redesigning the UI
+
+- Replace the single model/staged-model/path state with two explicit slots.
+- Allocate two mono input buffers and two mono model output buffers.
+- Feed input channel 0 to NAM A and input channel 1 to NAM B.
+- Write A to host output 0 and B to host output 1.
+- Add independent A/B output-gain parameters.
+- Report the maximum latency of the two slots.
+- Silence an unloaded slot.
+
+Exit condition: deterministic left-to-A/right-to-B stereo routing works with
+two test models, with no changes to branding or visual design.
+
+### 3. Add the minimal two-slot UI and state
+
+- Add separate model A and B file browsers.
+- Add A gain and B gain controls.
+- Serialize both paths and all four gains.
+- Use a new DualNAM state header and version; do not claim compatibility with
+  NeuralAmpModeler presets.
+
+Exit condition: save/reopen a DAW session and restore both model paths and
+gains.
+
+### 4. Rename and package as DualNAM
+
+- Rename plug-in display name, bundle name, C++ class, identifiers, plist
+  references, Xcode targets, resources, and output bundles.
+- Use new manufacturer and plug-in identifiers rather than upstream IDs.
+- Build only VST3 and AU for the first local release.
+- Add license and third-party notices.
+
+Exit condition: DualNAM can coexist with the official NAM plug-in.
+
+### 5. Validate the local release
+
+- Test 44.1, 48, and 96 kHz.
+- Test common buffer sizes from 32 through 1024 samples.
+- Confirm the left input reaches only model A and the left output.
+- Confirm the right input reaches only model B and the right output.
+- Confirm Gig Performer can duplicate one mono source to both plug-in inputs
+  for dual-mono operation.
+- Confirm A appears only on left and B only on right.
+- Confirm each gain control is automatable and state restores correctly.
+- Run `auval` on the AU and `pluginval` on both formats.
+- Measure CPU with two representative models.
+
+## Required downloads
+
+1. Full Xcode from the Mac App Store. Command Line Tools alone are insufficient
+   because this project builds through an Xcode workspace/project.
+2. The VST3 SDK pinned by this version of iPlug2:
+
+   ```sh
+   cd iPlug2/Dependencies/IPlug
+   ./download-iplug-sdks.sh
+   ```
+
+3. iPlug2's pinned prebuilt macOS libraries:
+
+   ```sh
+   cd iPlug2/Dependencies
+   ./download-prebuilt-libs.sh
+   ```
+
+Optional validation download after the first successful build:
+
+- pluginval: <https://github.com/Tracktion/pluginval>
+
+No separate JUCE installation is required. This upstream plug-in uses iPlug2.
+
+## Local build outline
+
+After installing Xcode:
+
+```sh
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -license accept
+./scripts/check-macos-toolchain.sh
+open NeuralAmpModeler/NeuralAmpModeler.xcworkspace
+```
+
+Build the VST3 and AU schemes from Xcode first. The existing distribution
+script builds additional formats and assumes release packaging tools, so it is
+not the best first local-development command.
+
+Expected development output locations are:
+
+- `~/Library/Audio/Plug-Ins/VST3`
+- `~/Library/Audio/Plug-Ins/Components`
+
+## Risks
+
+- Running two NAM instances roughly doubles model inference cost.
+- Different model sample rates create independent resampler latency. The host
+  sees one plug-in latency, so the lower-latency branch may require explicit
+  delay compensation to keep left and right time-aligned.
+- Upstream's current class and Xcode project names are repeated throughout the
+  project. Renaming before the DSP works would create a large, hard-to-review
+  diff.
+- Public distribution requires unique identifiers, signing, notarization, and
+  a careful license/attribution review. A local unsigned development build does
+  not require completing that release process.

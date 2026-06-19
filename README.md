@@ -1,38 +1,82 @@
-# Neural Amp Modeler Plug-in
+# DualNAM
 
-[![Build](https://github.com/sdatkinson/NeuralAmpModelerPlugin/actions/workflows/build-native.yml/badge.svg)](https://github.com/sdatkinson/NeuralAmpModelerPlugin/actions/workflows/build-native.yml)
+DualNAM is a work-in-progress macOS VST3/AUv2 effect that runs two independent
+[Neural Amp Modeler](https://www.neuralampmodeler.com/) models in one stereo
+plug-in.
 
-A VST3/AudioUnit plug-in\* for [Neural Amp Modeler](https://github.com/sdatkinson/neural-amp-modeler), built with [iPlug2](https://iplug2.github.io).
+The initial routing target is:
 
-- https://www.youtube.com/user/RunawayThumbtack
-- https://github.com/sdatkinson/neural-amp-modeler
+```text
+left input  -> NAM model A -> left output
+right input -> NAM model B -> right output
+```
 
-## Building and Installation
+Each slot will load its own `.nam` file and expose independent gain control.
+Gig Performer can duplicate one mono guitar source to both plug-in inputs when
+dual-mono processing is needed.
 
-To build the app or plugin, there are build scripts in [NeuralAmpModeler/scripts/](https://github.com/sdatkinson/NeuralAmpModelerPlugin/tree/main/NeuralAmpModeler/scripts).
-The [workflows](https://github.com/sdatkinson/NeuralAmpModelerPlugin/tree/main/.github/workflows) can show you how to do this.
+## Project status
 
-### Pre-built installers
+DualNAM is currently in development bootstrap. The official NAM plug-in source
+and its pinned dependencies have been cloned, but the dual-model DSP and UI
+have not been implemented yet.
 
-If you want a pre-built installer from this repo without having to , I've made "Gateway", a fork of this repo, availble at https://neuralampmodeler.com/users!
+The current plan is documented in
+[`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
 
-## Supported Platforms
+## Upstream projects
 
-The Neural Amp Modeler plugin currently supports Windows 10 (64bit) or later, and macOS 10.15 (Catalina) or later.
+DualNAM starts from and preserves the history of:
 
-For Linux support, there is an LV2 plugin available: https://github.com/mikeoliphant/neural-amp-modeler-lv2.
+- [sdatkinson/NeuralAmpModelerPlugin](https://github.com/sdatkinson/NeuralAmpModelerPlugin)
+- [sdatkinson/NeuralAmpModelerCore](https://github.com/sdatkinson/NeuralAmpModelerCore)
 
-## About
+The plug-in uses the upstream iPlug2 project and pinned Git submodules. Clone
+recursively:
 
-This is a cleaned up version of [the original iPlug2-based NAM plugin](https://github.com/sdatkinson/iPlug2) with some refactoring to adopt better practices recommended by the developers of iPlug2.
-(Thanks [Oli](https://github.com/olilarkin) for your generous suggestions!)
+```sh
+git clone --recursive https://github.com/mosesdasilva/DualNAM.git
+cd DualNAM
+```
 
-\*could also support AAX, CLAP, Linux, iOS soon.
+## Development setup
 
-## Rough edges
+Required on macOS:
 
-### Standalone I/O
-The I/O for the standalone doesn't inherit the stability of most plugin hosts (DAWs), so it's a bit sparser on features. For complex routing, the plugin (VST3/AU) inside a plugin host is still the most reliable option.
+- full Xcode;
+- Apple Command Line Tools;
+- Git and Python 3;
+- the repository-managed VST3 SDK and iPlug2 prebuilt libraries.
 
-### Graphics backend
-If you're having trouble with NAM crashing before the GUI comes up, then you might have an unsupported graphics configuration. Usually, this is when you have a dedicated graphics card (like an nVIDIA GPU) and you're using the integrated (CPU) graphics on a Windows system. To fix this, Go to the control panel, pick NAM (or your DAW), and make sure that it uses your graphics card. (If you know more and can help fix this, please make an Issue and let me know more!)
+Check the local setup:
+
+```sh
+./scripts/check-macos-toolchain.sh
+```
+
+If the VST3 SDK or iPlug2 libraries are missing:
+
+```sh
+cd iPlug2/Dependencies/IPlug
+./download-iplug-sdks.sh
+
+cd ..
+./download-prebuilt-libs.sh
+```
+
+The first baseline build will use the `macOS-VST3` and `macOS-AUv2` schemes in
+`NeuralAmpModeler/NeuralAmpModeler.xcworkspace`.
+
+## Development approach
+
+This project uses small increments, test-driven development, continuous
+integration, and real-time-audio safety rules. Contributors and coding agents
+must read [`AGENTS.md`](AGENTS.md) before making changes.
+
+## License and attribution
+
+The upstream Neural Amp Modeler plug-in is licensed under the MIT License.
+The original copyright and license are retained in [`LICENSE`](LICENSE).
+
+DualNAM is an independent project and is not an official Neural Amp Modeler
+release.
