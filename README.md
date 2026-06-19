@@ -17,9 +17,16 @@ dual-mono processing is needed.
 
 ## Project status
 
-DualNAM is currently in development bootstrap. The official NAM plug-in source
-and its pinned dependencies have been cloned, but the dual-model DSP and UI
-have not been implemented yet.
+DualNAM is currently in early development. The first stereo-routing increment
+is implemented and tested:
+
+- left input is routed to model slot A and the left output;
+- right input is reserved for model slot B and the right output;
+- an unloaded slot is silent.
+
+The existing upstream model browser currently loads slot A only. Slot B
+loading, independent gains, state, branding, and the final UI are not yet
+implemented.
 
 The current plan is documented in
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
@@ -64,8 +71,22 @@ cd ..
 ./download-prebuilt-libs.sh
 ```
 
-The first baseline build will use the `macOS-VST3` and `macOS-AUv2` schemes in
-`NeuralAmpModeler/NeuralAmpModeler.xcworkspace`.
+Build and validate the unmodified upstream VST3/AUv2 baseline:
+
+```sh
+./scripts/verify-baseline-macos.sh
+```
+
+The script uses the `macOS-VST3` and `macOS-AUv2` schemes from
+`NeuralAmpModeler/projects/NeuralAmpModeler-macOS.xcodeproj`. It installs
+unsigned local-development bundles into the user's VST3 and Components folders
+and runs Apple's AU validator.
+
+Run the focused routing tests:
+
+```sh
+./scripts/test-routing.sh
+```
 
 ## Development approach
 

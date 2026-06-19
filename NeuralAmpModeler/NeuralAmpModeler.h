@@ -9,6 +9,7 @@
 #include "../NeuralAmpModelerCore/NAM/slimmable.h"
 
 #include "Colors.h"
+#include "DualNAMRouting.h"
 #include "ToneStack.h"
 
 #include "IPlug_include_in_plug_hdr.h"
@@ -16,8 +17,7 @@
 
 
 const int kNumPresets = 1;
-// The plugin is mono inside
-constexpr size_t kNumChannelsInternal = 1;
+constexpr size_t kNumChannelsInternal = dualnam::kStereoChannels;
 
 class NAMSender : public iplug::IPeakAvgSender<>
 {
@@ -222,8 +222,6 @@ private:
   void _ApplyDSPStaging();
   // Deallocates mInputPointers and mOutputPointers
   void _DeallocateIOPointers();
-  // Fallback that just copies inputs to outputs if mDSP doesn't hold a model.
-  void _FallbackDSP(iplug::sample** inputs, iplug::sample** outputs, const size_t numChannels, const size_t numFrames);
   // Sizes based on mInputArray
   size_t _GetBufferNumChannels() const;
   size_t _GetBufferNumFrames() const;
@@ -293,7 +291,7 @@ private:
   // Noise gates
   dsp::noise_gate::Trigger mNoiseGateTrigger;
   dsp::noise_gate::Gain mNoiseGateGain;
-  // The model actually being used:
+  // Slot A remains the only loadable model until the model-B UI/state increment.
   std::unique_ptr<ResamplingNAM> mModel;
   // And the IR
   std::unique_ptr<dsp::ImpulseResponse> mIR;

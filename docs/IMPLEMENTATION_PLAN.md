@@ -111,6 +111,15 @@ Exit condition: the unmodified upstream source builds locally.
 Exit condition: deterministic left-to-A/right-to-B stereo routing works with
 two test models, with no changes to branding or visual design.
 
+Progress:
+
+- Completed: testable left/right routing seam, two internal channels, slot
+  isolation, silent unloaded slots, VST3/AUv2 builds, and AU validation.
+- Current limitation: the upstream model browser loads slot A only; slot B has
+  no loader or persisted state yet.
+- Remaining in this increment: replace single model/staging/path state with two
+  explicit slots, add independent gains, and report/compensate branch latency.
+
 ### 3. Add the minimal two-slot UI and state
 
 - Add separate model A and B file browsers.
@@ -177,12 +186,13 @@ After installing Xcode:
 sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
 sudo xcodebuild -license accept
 ./scripts/check-macos-toolchain.sh
-open NeuralAmpModeler/NeuralAmpModeler.xcworkspace
+./scripts/verify-baseline-macos.sh
 ```
 
-Build the VST3 and AU schemes from Xcode first. The existing distribution
-script builds additional formats and assumes release packaging tools, so it is
-not the best first local-development command.
+The verified baseline script builds the VST3 and AU schemes directly from the
+macOS Xcode project. The existing distribution script builds additional
+formats and assumes release packaging tools, so it is not the local-development
+command.
 
 Expected development output locations are:
 

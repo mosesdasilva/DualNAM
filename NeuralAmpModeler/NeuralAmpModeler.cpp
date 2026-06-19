@@ -333,7 +333,7 @@ void NeuralAmpModeler::ProcessBlock(iplug::sample** inputs, iplug::sample** outp
   disable_denormals();
 
   _PrepareBuffers(numChannelsInternal, numFrames);
-  // Input is collapsed to mono in preparation for the NAM.
+  // Preserve left/right input separation for the two independent model slots.
   _ProcessInput(inputs, numFrames, numChannelsExternalIn, numChannelsInternal);
   _ApplyDSPStaging();
   const bool noiseGateActive = GetParam(kNoiseGateActive)->Value();
@@ -355,14 +355,8 @@ void NeuralAmpModeler::ProcessBlock(iplug::sample** inputs, iplug::sample** outp
     triggerOutput = mNoiseGateTrigger.Process(mInputPointers, numChannelsInternal, numFrames);
   }
 
-  if (mModel != nullptr)
-  {
-    mModel->process(triggerOutput, mOutputPointers, nFrames);
-  }
-  else
-  {
-    _FallbackDSP(triggerOutput, mOutputPointers, numChannelsInternal, numFrames);
-  }
+  ResamplingNAM* models[dualnam::kStereoChannels]{mModel.get(), nullptr};
+  dualnam::ProcessStereoModels(triggerOutput, mOutputPointers, nFrames, models);
   // Apply the noise gate after the NAM
   sample** gateGainOutput =
     noiseGateActive ? mNoiseGateGain.Process(mOutputPointers, numChannelsInternal, numFrames) : mOutputPointers;
@@ -646,14 +640,6 @@ void NeuralAmpModeler::_DeallocateIOPointers()
     throw std::runtime_error("Failed to deallocate pointer to output buffer!\n");
 }
 
-void NeuralAmpModeler::_FallbackDSP(iplug::sample** inputs, iplug::sample** outputs, const size_t numChannels,
-                                    const size_t numFrames)
-{
-  for (auto c = 0; c < numChannels; c++)
-    for (auto s = 0; s < numFrames; s++)
-      mOutputArray[c][s] = mInputArray[c][s];
-}
-
 void NeuralAmpModeler::_ResetModelAndIR(const double sampleRate, const int maxBlockSize)
 {
   // Model
@@ -885,48 +871,43 @@ void NeuralAmpModeler::_PrepareIOPointers(const size_t numChannels)
 void NeuralAmpModeler::_ProcessInput(iplug::sample** inputs, const size_t nFrames, const size_t nChansIn,
                                      const size_t nChansOut)
 {
-  // We'll assume that the main processing is mono for now. We'll handle dual amps later.
-  if (nChansOut != 1)
+  if (nChansOut != dualnam::kStereoChannels)
   {
     std::stringstream ss;
-    ss << "Expected mono output, but " << nChansOut << " output channels are requested!";
+    ss << "Expected " << dualnam::kStereoChannels << " internal channels, but " << nChansOut
+       << " channels were requested.";
     throw std::runtime_error(ss.str());
   }
 
-  // On the standalone, we can probably assume that the user has plugged into only one input and they expect it to be
-  // carried straight through. Don't apply any division over nChansIn because we're just "catching anything out there."
-  // However, in a DAW, it's probably something providing stereo, and we want to take the average in order to avoid
-  // doubling the loudness. (This would change w/ double mono processing)
-  double gain = mInputGain;
-#ifndef APP_API
-  gain /= (float)nChansIn;
-#endif
-  // Assume _PrepareBuffers() was already called
-  for (size_t c = 0; c < nChansIn; c++)
+  for (size_t channel = 0; channel < nChansOut; ++channel)
+  {
+    const bool inputConnected = channel < nChansIn;
     for (size_t s = 0; s < nFrames; s++)
-      if (c == 0)
-        mInputArray[0][s] = gain * inputs[c][s];
-      else
-        mInputArray[0][s] += gain * inputs[c][s];
+      mInputArray[channel][s] = inputConnected ? mInputGain * inputs[channel][s] : 0.0;
+  }
 }
 
 void NeuralAmpModeler::_ProcessOutput(iplug::sample** inputs, iplug::sample** outputs, const size_t nFrames,
                                       const size_t nChansIn, const size_t nChansOut)
 {
   const double gain = mOutputGain;
-  // Assume _PrepareBuffers() was already called
-  if (nChansIn != 1)
-    throw std::runtime_error("Plugin is supposed to process in mono.");
-  // Broadcast the internal mono stream to all output channels.
-  const size_t cin = 0;
-  for (auto cout = 0; cout < nChansOut; cout++)
+  if (nChansIn != dualnam::kStereoChannels)
+    throw std::runtime_error("DualNAM requires two internal output channels.");
+
+  for (size_t channel = 0; channel < nChansOut; ++channel)
+  {
+    const bool internalChannelAvailable = channel < nChansIn;
     for (auto s = 0; s < nFrames; s++)
+    {
+      const sample value = internalChannelAvailable ? gain * inputs[channel][s] : 0.0;
 #ifdef APP_API // Ensure valid output to interface
-      outputs[cout][s] = std::clamp(gain * inputs[cin][s], -1.0, 1.0);
+      outputs[channel][s] = std::clamp(value, -1.0, 1.0);
 #else // In a DAW, other things may come next and should be able to handle large
       // values.
-      outputs[cout][s] = gain * inputs[cin][s];
+      outputs[channel][s] = value;
 #endif
+    }
+  }
 }
 
 void NeuralAmpModeler::_UpdateControlsFromModel()

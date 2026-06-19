@@ -128,7 +128,8 @@ numbers.
 ## Continuous integration and feedback
 
 - There must be one documented command for the complete local verification
-  path. Until that command exists, do not claim the project has complete CI.
+  path. Until DualNAM-specific tests and plug-in validation are added, do not
+  claim the project has complete CI.
 - Every proposed change should pass the same checks CI runs.
 - CI should run on pushes and pull requests and fail on:
   - compilation errors;
@@ -149,15 +150,21 @@ Current bootstrap check:
 ./scripts/check-macos-toolchain.sh
 ```
 
-The intended macOS targets are `macOS-VST3` and `macOS-AUv2` in:
+Focused stereo-routing test:
 
-```text
-NeuralAmpModeler/NeuralAmpModeler.xcworkspace
+```sh
+./scripts/test-routing.sh
 ```
 
-When full Xcode is available, replace this section with the verified
-non-interactive build/test commands and use those exact commands locally and in
-CI.
+Verified upstream baseline build and validation:
+
+```sh
+./scripts/verify-baseline-macos.sh
+```
+
+The script builds the `macOS-VST3` and `macOS-AUv2` schemes from
+`NeuralAmpModeler/projects/NeuralAmpModeler-macOS.xcodeproj`, verifies both
+universal bundles, and runs Apple's AU validator.
 
 A passing suite reduces risk; it does not prove correctness. If a required
 check cannot run, state the exact blocker and the behavior left unverified.
