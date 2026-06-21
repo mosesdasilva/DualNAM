@@ -54,13 +54,15 @@ void NeuralAmpModeler::_UnserializeApplyConfig(nlohmann::json& config)
   OnParamReset(iplug::EParamSource::kPresetRecall);
   LEAVE_PARAMS_MUTEX
 
-  mNAMPath.Set(static_cast<std::string>(config["NAMPath"]).c_str());
+  const auto legacyPaths = dualnam::state::ModelPaths::FromLegacy(config.value("NAMPath", std::string{}));
+  mNAMPathA.Set(config.value("NAMPathA", legacyPaths.modelA).c_str());
+  mNAMPathB.Set(config.value("NAMPathB", legacyPaths.modelB).c_str());
   mIRPath.Set(static_cast<std::string>(config["IRPath"]).c_str());
 
-  if (mNAMPath.GetLength())
-  {
-    _StageModel(mNAMPath);
-  }
+  if (mNAMPathA.GetLength())
+    _StageModel(dualnam::ModelSlot::A, mNAMPathA);
+  if (mNAMPathB.GetLength())
+    _StageModel(dualnam::ModelSlot::B, mNAMPathB);
   if (mIRPath.GetLength())
   {
     _StageIR(mIRPath);
@@ -298,6 +300,47 @@ int NeuralAmpModeler::_UnserializeStateWithKnownVersion(const iplug::IByteChunk&
     // You shouldn't be here...
     assert(false);
   }
+  _UnserializeApplyConfig(config);
+  return pos;
+}
+
+int NeuralAmpModeler::_UnserializeDualNAMState(const iplug::IByteChunk& chunk, int startPos)
+{
+  int pos = startPos;
+  WDL_String schemaVersion;
+  pos = chunk.GetStr(schemaVersion, pos);
+  if (strcmp(schemaVersion.Get(), dualnam::state::kSchemaVersion) != 0)
+    return -1;
+
+  nlohmann::json config;
+  WDL_String path;
+  pos = chunk.GetStr(path, pos);
+  config["NAMPathA"] = std::string(path.Get());
+  pos = chunk.GetStr(path, pos);
+  config["NAMPathB"] = std::string(path.Get());
+  pos = chunk.GetStr(path, pos);
+  config["IRPath"] = std::string(path.Get());
+
+  std::vector<std::string> paramNames{"Input",
+                                      "Threshold",
+                                      "Bass",
+                                      "Middle",
+                                      "Treble",
+                                      "Output",
+                                      "NoiseGateActive",
+                                      "ToneStack",
+                                      "IRToggle",
+                                      "CalibrateInput",
+                                      "InputCalibrationLevel",
+                                      "OutputMode",
+                                      "Slim"};
+  for (const auto& paramName : paramNames)
+  {
+    double value = 0.0;
+    pos = chunk.Get(&value, pos);
+    config[paramName] = value;
+  }
+
   _UnserializeApplyConfig(config);
   return pos;
 }

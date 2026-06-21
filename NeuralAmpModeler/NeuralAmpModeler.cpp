@@ -166,12 +166,13 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     const auto fileWidth = 200.0f;
     const auto fileHeight = 30.0f;
     const auto irYOffset = 38.0f;
-    const auto modelArea =
-      contentArea.GetFromBottom((2.0f * fileHeight)).GetFromTop(fileHeight).GetMidHPadded(fileWidth).GetVShifted(-1);
+    const auto modelRow = contentArea.GetFromBottom((2.0f * fileHeight)).GetFromTop(fileHeight).GetVShifted(-1);
+    const auto modelAreaA = modelRow.GetFromLeft(fileWidth).GetHShifted(35.0f);
+    const auto modelAreaB = modelRow.GetFromRight(fileWidth).GetHShifted(-35.0f);
     const auto slimIconArea =
-      IRECT(modelArea.R + 6.f, modelArea.MH() - 14.f, modelArea.R + 6.f + 2.f * 28.f, modelArea.MH() + 14.f);
-    const auto modelIconArea = modelArea.GetFromLeft(30).GetTranslated(-40, 10);
-    const auto irArea = modelArea.GetVShifted(irYOffset);
+      IRECT(modelAreaA.R + 6.f, modelAreaA.MH() - 14.f, modelAreaA.R + 6.f + 2.f * 28.f, modelAreaA.MH() + 14.f);
+    const auto modelIconArea = modelAreaA.GetFromLeft(30).GetTranslated(-40, 10);
+    const auto irArea = modelRow.GetMidHPadded(fileWidth).GetVShifted(irYOffset);
     const auto irSwitchArea = irArea.GetFromLeft(30.0f).GetHShifted(-40.0f).GetScaledAboutCentre(0.6f);
 
     // Areas for meters
@@ -182,20 +183,19 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     const auto settingsButtonArea = CornerButtonArea(b);
 
     // Model loader button
-    auto loadModelCompletionHandler = [&](const WDL_String& fileName, const WDL_String& path) {
-      if (fileName.GetLength())
-      {
-        // Sets mNAMPath and mStagedNAM
-        const std::string msg = _StageModel(fileName);
-        // TODO error messages like the IR loader.
-        if (msg.size())
+    auto makeLoadModelCompletionHandler = [&](const dualnam::ModelSlot slot) {
+      return [&, slot](const WDL_String& fileName, const WDL_String& path) {
+        if (!fileName.GetLength())
+          return;
+
+        const std::string msg = _StageModel(slot, fileName);
+        if (!msg.empty())
         {
           std::stringstream ss;
           ss << "Failed to load NAM model. Message:\n\n" << msg;
           _ShowMessageBox(GetUI(), ss.str().c_str(), "Failed to load model!", kMB_OK);
         }
-        std::cout << "Loaded: " << fileName.Get() << std::endl;
-      }
+      };
     };
 
     // IR loader button
@@ -221,19 +221,27 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     pGraphics->AttachControl(new ISVGControl(modelIconArea, modelIconSVG));
 
 #ifdef NAM_PICK_DIRECTORY
-    const std::string defaultNamFileString = "Select model directory...";
+    const std::string defaultNamAFileString = "Select model A directory...";
+    const std::string defaultNamBFileString = "Select model B directory...";
     const std::string defaultIRString = "Select IR directory...";
 #else
-    const std::string defaultNamFileString = "Select model...";
+    const std::string defaultNamAFileString = "Select model A...";
+    const std::string defaultNamBFileString = "Select model B...";
     const std::string defaultIRString = "Select IR...";
 #endif
     // Getting started page listing additional resources
     const char* const getUrl = "https://www.neuralampmodeler.com/users#comp-marb84o5";
     pGraphics->AttachControl(
-      new NAMFileBrowserControl(modelArea, kMsgTagClearModel, defaultNamFileString.c_str(), "nam",
-                                loadModelCompletionHandler, style, fileSVG, crossSVG, leftArrowSVG, rightArrowSVG,
+      new NAMFileBrowserControl(modelAreaA, kMsgTagClearModelA, defaultNamAFileString.c_str(), "nam",
+                                makeLoadModelCompletionHandler(dualnam::ModelSlot::A), style, fileSVG, crossSVG,
+                                leftArrowSVG, rightArrowSVG,
                                 fileBackgroundBitmap, globeSVG, "Get NAM Models", getUrl),
-      kCtrlTagModelFileBrowser);
+      kCtrlTagModelAFileBrowser);
+    pGraphics->AttachControl(
+      new NAMFileBrowserControl(modelAreaB, kMsgTagClearModelB, defaultNamBFileString.c_str(), "nam",
+                                makeLoadModelCompletionHandler(dualnam::ModelSlot::B), style, fileSVG, crossSVG,
+                                leftArrowSVG, rightArrowSVG, fileBackgroundBitmap, globeSVG, "Get NAM Models", getUrl),
+      kCtrlTagModelBFileBrowser);
 
     auto hideSlimOverlay = [](IControl* pCaller) {
       IGraphics* ui = pCaller->GetUI();
@@ -355,7 +363,8 @@ void NeuralAmpModeler::ProcessBlock(iplug::sample** inputs, iplug::sample** outp
     triggerOutput = mNoiseGateTrigger.Process(mInputPointers, numChannelsInternal, numFrames);
   }
 
-  ResamplingNAM* models[dualnam::kStereoChannels]{mModel.get(), nullptr};
+  ResamplingNAM* models[dualnam::kStereoChannels]{mModelSlots.Live(dualnam::ModelSlot::A),
+                                                  mModelSlots.Live(dualnam::ModelSlot::B)};
   dualnam::ProcessStereoModels(triggerOutput, mOutputPointers, nFrames, models);
   // Apply the noise gate after the NAM
   sample** gateGainOutput =
@@ -443,15 +452,10 @@ void NeuralAmpModeler::OnIdle()
 
 bool NeuralAmpModeler::SerializeState(IByteChunk& chunk) const
 {
-  // If this isn't here when unserializing, then we know we're dealing with something before v0.8.0.
-  WDL_String header("###NeuralAmpModeler###"); // Don't change this!
-  chunk.PutStr(header.Get());
-  // Plugin version, so we can load legacy serialized states in the future!
-  WDL_String version(PLUG_VERSION_STR);
-  chunk.PutStr(version.Get());
-  // Model directory (don't serialize the model itself; we'll just load it again
-  // when we unserialize)
-  chunk.PutStr(mNAMPath.Get());
+  chunk.PutStr(dualnam::state::kHeader);
+  chunk.PutStr(dualnam::state::kSchemaVersion);
+  chunk.PutStr(mNAMPathA.Get());
+  chunk.PutStr(mNAMPathB.Get());
   chunk.PutStr(mIRPath.Get());
   return SerializeParams(chunk);
 }
@@ -463,8 +467,11 @@ int NeuralAmpModeler::UnserializeState(const IByteChunk& chunk, int startPos)
   int pos = startPos;
   pos = chunk.GetStr(header, pos);
 
-  const char* kExpectedHeader = "###NeuralAmpModeler###";
-  if (strcmp(header.Get(), kExpectedHeader) == 0)
+  if (strcmp(header.Get(), dualnam::state::kHeader) == 0)
+  {
+    return _UnserializeDualNAMState(chunk, pos);
+  }
+  if (strcmp(header.Get(), dualnam::state::kLegacyNAMHeader) == 0)
   {
     return _UnserializeStateWithKnownVersion(chunk, pos);
   }
@@ -478,13 +485,20 @@ void NeuralAmpModeler::OnUIOpen()
 {
   Plugin::OnUIOpen();
 
-  if (mNAMPath.GetLength())
+  if (mNAMPathA.GetLength())
   {
-    SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadedModel, mNAMPath.GetLength(), mNAMPath.Get());
+    SendControlMsgFromDelegate(kCtrlTagModelAFileBrowser, kMsgTagLoadedModel, mNAMPathA.GetLength(), mNAMPathA.Get());
     // If it's not loaded yet, then mark as failed.
     // If it's yet to be loaded, then the completion handler will set us straight once it runs.
-    if (mModel == nullptr && mStagedModel == nullptr)
-      SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadFailed);
+    if (_ModelA() == nullptr && _StagedModelA() == nullptr)
+      SendControlMsgFromDelegate(kCtrlTagModelAFileBrowser, kMsgTagLoadFailed);
+  }
+
+  if (mNAMPathB.GetLength())
+  {
+    SendControlMsgFromDelegate(kCtrlTagModelBFileBrowser, kMsgTagLoadedModel, mNAMPathB.GetLength(), mNAMPathB.Get());
+    if (_ModelB() == nullptr && _StagedModelB() == nullptr)
+      SendControlMsgFromDelegate(kCtrlTagModelBFileBrowser, kMsgTagLoadFailed);
   }
 
   if (mIRPath.GetLength())
@@ -494,7 +508,7 @@ void NeuralAmpModeler::OnUIOpen()
       SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadFailed);
   }
 
-  if (mModel != nullptr)
+  if (_ModelA() != nullptr)
   {
     _UpdateControlsFromModel();
   }
@@ -542,7 +556,8 @@ bool NeuralAmpModeler::OnMessage(int msgTag, int ctrlTag, int dataSize, const vo
 {
   switch (msgTag)
   {
-    case kMsgTagClearModel: mShouldRemoveModel = true; return true;
+    case kMsgTagClearModelA: mModelSlots.RequestRemove(dualnam::ModelSlot::A); return true;
+    case kMsgTagClearModelB: mModelSlots.RequestRemove(dualnam::ModelSlot::B); return true;
     case kMsgTagClearIR: mShouldRemoveIR = true; return true;
     case kMsgTagHighlightColor:
     {
@@ -588,29 +603,29 @@ void NeuralAmpModeler::_AllocateIOPointers(const size_t nChans)
 
 void NeuralAmpModeler::_ApplyDSPStaging()
 {
-  // Remove marked modules
-  if (mShouldRemoveModel)
+  const auto modelChanges = mModelSlots.ApplyPending();
+  const auto modelAChange = modelChanges[static_cast<size_t>(dualnam::ModelSlot::A)];
+  if (modelAChange == dualnam::SlotChange::Removed)
   {
-    mModel = nullptr;
-    mNAMPath.Set("");
-    mShouldRemoveModel = false;
+    mNAMPathA.Set("");
     mModelCleared = true;
-    _UpdateLatency();
-    _SetInputGain();
-    _SetOutputGain();
   }
+  const auto modelBChange = modelChanges[static_cast<size_t>(dualnam::ModelSlot::B)];
+  if (modelBChange == dualnam::SlotChange::Removed)
+    mNAMPathB.Set("");
   if (mShouldRemoveIR)
   {
     mIR = nullptr;
     mIRPath.Set("");
     mShouldRemoveIR = false;
   }
-  // Move things from staged to live
-  if (mStagedModel != nullptr)
+  if (modelAChange == dualnam::SlotChange::Activated)
   {
-    mModel = std::move(mStagedModel);
-    mStagedModel = nullptr;
     mNewModelLoadedInDSP = true;
+  }
+  if (modelAChange != dualnam::SlotChange::None ||
+      modelBChange != dualnam::SlotChange::None)
+  {
     _UpdateLatency();
     _SetInputGain();
     _SetOutputGain();
@@ -642,14 +657,12 @@ void NeuralAmpModeler::_DeallocateIOPointers()
 
 void NeuralAmpModeler::_ResetModelAndIR(const double sampleRate, const int maxBlockSize)
 {
-  // Model
-  if (mStagedModel != nullptr)
+  for (const auto slot : {dualnam::ModelSlot::A, dualnam::ModelSlot::B})
   {
-    mStagedModel->Reset(sampleRate, maxBlockSize);
-  }
-  else if (mModel != nullptr)
-  {
-    mModel->Reset(sampleRate, maxBlockSize);
+    if (auto* staged = mModelSlots.Staged(slot))
+      staged->Reset(sampleRate, maxBlockSize);
+    else if (auto* live = mModelSlots.Live(slot))
+      live->Reset(sampleRate, maxBlockSize);
   }
 
   // IR
@@ -677,9 +690,9 @@ void NeuralAmpModeler::_SetInputGain()
 {
   iplug::sample inputGainDB = GetParam(kInputLevel)->Value();
   // Input calibration
-  if ((mModel != nullptr) && (mModel->HasInputLevel()) && GetParam(kCalibrateInput)->Bool())
+  if ((_ModelA() != nullptr) && (_ModelA()->HasInputLevel()) && GetParam(kCalibrateInput)->Bool())
   {
-    inputGainDB += GetParam(kInputCalibrationLevel)->Value() - mModel->GetInputLevel();
+    inputGainDB += GetParam(kInputCalibrationLevel)->Value() - _ModelA()->GetInputLevel();
   }
   mInputGain = DBToAmp(inputGainDB);
 }
@@ -687,24 +700,24 @@ void NeuralAmpModeler::_SetInputGain()
 void NeuralAmpModeler::_SetOutputGain()
 {
   double gainDB = GetParam(kOutputLevel)->Value();
-  if (mModel != nullptr)
+  if (_ModelA() != nullptr)
   {
     const int outputMode = GetParam(kOutputMode)->Int();
     switch (outputMode)
     {
       case 1: // Normalized
-        if (mModel->HasLoudness())
+        if (_ModelA()->HasLoudness())
         {
-          const double loudness = mModel->GetLoudness();
+          const double loudness = _ModelA()->GetLoudness();
           const double targetLoudness = -18.0;
           gainDB += (targetLoudness - loudness);
         }
         break;
       case 2: // Calibrated
-        if (mModel->HasOutputLevel())
+        if (_ModelA()->HasOutputLevel())
         {
           const double inputLevel = GetParam(kInputCalibrationLevel)->Value();
-          const double outputLevel = mModel->GetOutputLevel();
+          const double outputLevel = _ModelA()->GetOutputLevel();
           gainDB += (outputLevel - inputLevel);
         }
         break;
@@ -724,13 +737,18 @@ void NeuralAmpModeler::_ApplySlimParamToLoadedNAMs()
     if (nam::SlimmableModel* s = p->GetSlimmableModel())
       s->SetSlimmableSize(v);
   };
-  apply(mModel.get());
-  apply(mStagedModel.get());
+  for (const auto slot : {dualnam::ModelSlot::A, dualnam::ModelSlot::B})
+  {
+    apply(mModelSlots.Live(slot));
+    apply(mModelSlots.Staged(slot));
+  }
 }
 
-std::string NeuralAmpModeler::_StageModel(const WDL_String& modelPath)
+std::string NeuralAmpModeler::_StageModel(const dualnam::ModelSlot slot, const WDL_String& modelPath)
 {
-  WDL_String previousNAMPath = mNAMPath;
+  WDL_String& slotPath = slot == dualnam::ModelSlot::A ? mNAMPathA : mNAMPathB;
+  const int browserTag = slot == dualnam::ModelSlot::A ? kCtrlTagModelAFileBrowser : kCtrlTagModelBFileBrowser;
+  WDL_String previousNAMPath = slotPath;
   try
   {
     auto dspPath = std::filesystem::u8path(modelPath.Get());
@@ -753,19 +771,16 @@ std::string NeuralAmpModeler::_StageModel(const WDL_String& modelPath)
     {
       slimmable->SetSlimmableSize(GetParam(kSlim)->Value());
     }
-    mStagedModel = std::move(temp);
-    mNAMPath = modelPath;
-    SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadedModel, mNAMPath.GetLength(), mNAMPath.Get());
+    mModelSlots.Stage(slot, std::move(temp));
+    slotPath = modelPath;
+    SendControlMsgFromDelegate(browserTag, kMsgTagLoadedModel, slotPath.GetLength(), slotPath.Get());
   }
   catch (std::runtime_error& e)
   {
-    SendControlMsgFromDelegate(kCtrlTagModelFileBrowser, kMsgTagLoadFailed);
+    SendControlMsgFromDelegate(browserTag, kMsgTagLoadFailed);
 
-    if (mStagedModel != nullptr)
-    {
-      mStagedModel = nullptr;
-    }
-    mNAMPath = previousNAMPath;
+    mModelSlots.CancelStaged(slot);
+    slotPath = previousNAMPath;
     std::cerr << "Failed to read DSP module" << std::endl;
     std::cerr << e.what() << std::endl;
     return e.what();
@@ -912,7 +927,7 @@ void NeuralAmpModeler::_ProcessOutput(iplug::sample** inputs, iplug::sample** ou
 
 void NeuralAmpModeler::_UpdateControlsFromModel()
 {
-  if (mModel == nullptr)
+  if (_ModelA() == nullptr)
   {
     return;
   }
@@ -920,26 +935,26 @@ void NeuralAmpModeler::_UpdateControlsFromModel()
   {
     ModelInfo modelInfo;
     modelInfo.sampleRate.known = true;
-    modelInfo.sampleRate.value = mModel->GetEncapsulatedSampleRate();
-    modelInfo.inputCalibrationLevel.known = mModel->HasInputLevel();
-    modelInfo.inputCalibrationLevel.value = mModel->HasInputLevel() ? mModel->GetInputLevel() : 0.0;
-    modelInfo.outputCalibrationLevel.known = mModel->HasOutputLevel();
-    modelInfo.outputCalibrationLevel.value = mModel->HasOutputLevel() ? mModel->GetOutputLevel() : 0.0;
+    modelInfo.sampleRate.value = _ModelA()->GetEncapsulatedSampleRate();
+    modelInfo.inputCalibrationLevel.known = _ModelA()->HasInputLevel();
+    modelInfo.inputCalibrationLevel.value = _ModelA()->HasInputLevel() ? _ModelA()->GetInputLevel() : 0.0;
+    modelInfo.outputCalibrationLevel.known = _ModelA()->HasOutputLevel();
+    modelInfo.outputCalibrationLevel.value = _ModelA()->HasOutputLevel() ? _ModelA()->GetOutputLevel() : 0.0;
 
     static_cast<NAMSettingsPageControl*>(pGraphics->GetControlWithTag(kCtrlTagSettingsBox))->SetModelInfo(modelInfo);
 
-    const bool disableInputCalibrationControls = !mModel->HasInputLevel();
+    const bool disableInputCalibrationControls = !_ModelA()->HasInputLevel();
     pGraphics->GetControlWithTag(kCtrlTagCalibrateInput)->SetDisabled(disableInputCalibrationControls);
     pGraphics->GetControlWithTag(kCtrlTagInputCalibrationLevel)->SetDisabled(disableInputCalibrationControls);
     {
       auto* c = static_cast<OutputModeControl*>(pGraphics->GetControlWithTag(kCtrlTagOutputMode));
-      c->SetNormalizedDisable(!mModel->HasLoudness());
-      c->SetCalibratedDisable(!mModel->HasOutputLevel());
+      c->SetNormalizedDisable(!_ModelA()->HasLoudness());
+      c->SetCalibratedDisable(!_ModelA()->HasOutputLevel());
     }
 
     if (auto* pSlimIcon = pGraphics->GetControlWithTag(kCtrlTagSlimmableIcon))
     {
-      const bool show = mModel->GetSlimmableModel() != nullptr;
+      const bool show = _ModelA()->GetSlimmableModel() != nullptr;
       pSlimIcon->Hide(!show);
     }
   }
@@ -947,11 +962,7 @@ void NeuralAmpModeler::_UpdateControlsFromModel()
 
 void NeuralAmpModeler::_UpdateLatency()
 {
-  int latency = 0;
-  if (mModel)
-  {
-    latency += mModel->GetLatency();
-  }
+  int latency = mModelSlots.MaximumLatency();
   // Other things that add latency here...
 
   // Feels weird to have to do this.

@@ -9,7 +9,9 @@
 #include "../NeuralAmpModelerCore/NAM/slimmable.h"
 
 #include "Colors.h"
+#include "DualNAMModelSlots.h"
 #include "DualNAMRouting.h"
+#include "DualNAMState.h"
 #include "ToneStack.h"
 
 #include "IPlug_include_in_plug_hdr.h"
@@ -54,7 +56,8 @@ const int numKnobs = 6;
 
 enum ECtrlTags
 {
-  kCtrlTagModelFileBrowser = 0,
+  kCtrlTagModelAFileBrowser = 0,
+  kCtrlTagModelBFileBrowser,
   kCtrlTagIRFileBrowser,
   kCtrlTagInputMeter,
   kCtrlTagOutputMeter,
@@ -71,7 +74,8 @@ enum ECtrlTags
 enum EMsgTags
 {
   // These tags are used from UI -> DSP
-  kMsgTagClearModel = 0,
+  kMsgTagClearModelA = 0,
+  kMsgTagClearModelB,
   kMsgTagClearIR,
   kMsgTagHighlightColor,
   // The following tags are from DSP -> UI
@@ -226,15 +230,18 @@ private:
   size_t _GetBufferNumChannels() const;
   size_t _GetBufferNumFrames() const;
   void _InitToneStack();
-  // Loads a NAM model and stores it to mStagedNAM
+  // Loads a NAM model and stages it for the selected slot.
   // Returns an empty string on success, or an error message on failure.
-  std::string _StageModel(const WDL_String& dspFile);
+  std::string _StageModel(dualnam::ModelSlot slot, const WDL_String& dspFile);
   // Loads an IR and stores it to mStagedIR.
   // Return status code so that error messages can be relayed if
   // it wasn't successful.
   dsp::wav::LoadReturnCode _StageIR(const WDL_String& irPath);
 
-  bool _HaveModel() const { return this->mModel != nullptr; };
+  ResamplingNAM* _ModelA() const { return mModelSlots.Live(dualnam::ModelSlot::A); }
+  ResamplingNAM* _StagedModelA() const { return mModelSlots.Staged(dualnam::ModelSlot::A); }
+  ResamplingNAM* _ModelB() const { return mModelSlots.Live(dualnam::ModelSlot::B); }
+  ResamplingNAM* _StagedModelB() const { return mModelSlots.Staged(dualnam::ModelSlot::B); }
   // Prepare the input & output buffers
   void _PrepareBuffers(const size_t numChannels, const size_t numFrames);
   // Manage pointers
@@ -259,6 +266,7 @@ private:
   void _UnserializeApplyConfig(nlohmann::json& config);
   // 0.7.9 and later
   int _UnserializeStateWithKnownVersion(const iplug::IByteChunk& chunk, int startPos);
+  int _UnserializeDualNAMState(const iplug::IByteChunk& chunk, int startPos);
   // Hopefully 0.7.3-0.7.8, but no gurantees
   int _UnserializeStateWithUnknownVersion(const iplug::IByteChunk& chunk, int startPos);
 
@@ -291,15 +299,11 @@ private:
   // Noise gates
   dsp::noise_gate::Trigger mNoiseGateTrigger;
   dsp::noise_gate::Gain mNoiseGateGain;
-  // Slot A remains the only loadable model until the model-B UI/state increment.
-  std::unique_ptr<ResamplingNAM> mModel;
+  dualnam::ModelSlots<ResamplingNAM> mModelSlots;
   // And the IR
   std::unique_ptr<dsp::ImpulseResponse> mIR;
-  // Manages switching what DSP is being used.
-  std::unique_ptr<ResamplingNAM> mStagedModel;
   std::unique_ptr<dsp::ImpulseResponse> mStagedIR;
   // Flags to take away the modules at a safe time.
-  std::atomic<bool> mShouldRemoveModel = false;
   std::atomic<bool> mShouldRemoveIR = false;
 
   std::atomic<bool> mNewModelLoadedInDSP = false;
@@ -312,8 +316,9 @@ private:
   recursive_linear_filter::HighPass mHighPass;
   //  recursive_linear_filter::LowPass mLowPass;
 
-  // Path to model's config.json or model.nam
-  WDL_String mNAMPath;
+  // Paths to each slot's config.json or model.nam.
+  WDL_String mNAMPathA;
+  WDL_String mNAMPathB;
   // Path to IR (.wav file)
   WDL_String mIRPath;
 
