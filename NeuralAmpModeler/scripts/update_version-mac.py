@@ -5,6 +5,9 @@
 import plistlib, os, sys, shutil
 
 IPLUG2_ROOT = "../../iPlug2"
+# Keep the upstream resource filenames until a separate project-file rename.
+# The generated plist contents and installed bundle names come from config.h.
+RESOURCE_BASENAME = "NeuralAmpModeler"
 
 scriptpath = os.path.dirname(os.path.realpath(__file__))
 projectpath = os.path.abspath(os.path.join(scriptpath, os.pardir))
@@ -41,7 +44,7 @@ def main():
 
     # VST3
 
-    plistpath = projectpath + "/resources/" + config["BUNDLE_NAME"] + "-VST3-Info.plist"
+    plistpath = projectpath + "/resources/" + RESOURCE_BASENAME + "-VST3-Info.plist"
     with open(plistpath, "rb") as f:
         vst3 = plistlib.load(f)
         vst3["CFBundleExecutable"] = config["BUNDLE_NAME"]
@@ -67,7 +70,7 @@ def main():
 
     # AUDIOUNIT v2
 
-    plistpath = projectpath + "/resources/" + config["BUNDLE_NAME"] + "-AU-Info.plist"
+    plistpath = projectpath + "/resources/" + RESOURCE_BASENAME + "-AU-Info.plist"
     with open(plistpath, "rb") as f:
         auv2 = plistlib.load(f)
         auv2["CFBundleExecutable"] = config["BUNDLE_NAME"]
@@ -122,7 +125,7 @@ def main():
         NSEXTENSIONPOINTIDENTIFIER = "com.apple.AudioUnit"
 
     plistpath = (
-        projectpath + "/resources/" + config["BUNDLE_NAME"] + "-macOS-AUv3-Info.plist"
+        projectpath + "/resources/" + RESOURCE_BASENAME + "-macOS-AUv3-Info.plist"
     )
 
     with open(plistpath, "rb") as f:
@@ -196,7 +199,7 @@ def main():
 
     # AAX
 
-    plistpath = projectpath + "/resources/" + config["BUNDLE_NAME"] + "-AAX-Info.plist"
+    plistpath = projectpath + "/resources/" + RESOURCE_BASENAME + "-AAX-Info.plist"
     with open(plistpath, "rb") as f:
         aax = plistlib.load(f)
         aax["CFBundleExecutable"] = config["BUNDLE_NAME"]
@@ -221,7 +224,7 @@ def main():
     # APP
 
     plistpath = (
-        projectpath + "/resources/" + config["BUNDLE_NAME"] + "-macOS-Info.plist"
+        projectpath + "/resources/" + RESOURCE_BASENAME + "-macOS-Info.plist"
     )
 
     with open(plistpath, "rb") as f:

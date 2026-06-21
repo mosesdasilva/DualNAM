@@ -114,11 +114,15 @@ two test models, with no changes to branding or visual design.
 Progress:
 
 - Completed: testable left/right routing seam, two internal channels, slot
-  isolation, silent unloaded slots, VST3/AUv2 builds, and AU validation.
-- Current limitation: the upstream model browser loads slot A only; slot B has
-  no loader or persisted state yet.
-- Remaining in this increment: replace single model/staging/path state with two
-  explicit slots, add independent gains, and report/compensate branch latency.
+  isolation, silent unloaded slots, two-slot ownership/staging/reset/removal,
+  maximum branch latency reporting, separate A/B model browsers and paths,
+  versioned DualNAM state with legacy slot-A migration, unique DualNAM VST3/AUv2
+  bundle identity, VST3/AUv2 builds, and AU validation.
+- Remaining before controlled host testing: manually verify two-model
+  save/reopen behavior in Gig Performer.
+- Remaining before production use: add independent gains, compensate unequal
+  branch latency, validate VST3 in a host/pluginval, and move model retirement
+  off the audio thread.
 
 ### 3. Add the minimal two-slot UI and state
 
@@ -131,6 +135,14 @@ Progress:
 Exit condition: save/reopen a DAW session and restore both model paths and
 gains.
 
+Progress:
+
+- Completed: separate model A/B browsers, independent load/clear handling,
+  persisted A/B paths, a versioned DualNAM state header, and legacy upstream
+  NAM state migration into slot A.
+- Remaining: independent A/B gain parameters and manual host save/reopen
+  verification.
+
 ### 4. Rename and package as DualNAM
 
 - Rename plug-in display name, bundle name, C++ class, identifiers, plist
@@ -140,6 +152,17 @@ gains.
 - Add license and third-party notices.
 
 Exit condition: DualNAM can coexist with the official NAM plug-in.
+
+Progress:
+
+- Completed for the supported VST3/AUv2 targets: display name, output bundle
+  names, version `0.1.0`, manufacturer, four-character component IDs, bundle
+  identifiers, generated plist metadata, and validation commands.
+- Intentionally deferred: source class, Xcode target, project, and resource
+  filename renames. They are internal and do not affect host coexistence.
+- Local migration note: the first build after changing the target product name
+  may remove a previously built `NeuralAmpModeler` bundle as stale Xcode output.
+  Reinstall the official NAM plug-in if it is needed alongside DualNAM.
 
 ### 5. Validate the local release
 

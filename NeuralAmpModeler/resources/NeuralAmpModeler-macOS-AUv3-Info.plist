@@ -5,21 +5,21 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>NeuralAmpModeler</string>
+	<string>DualNAM</string>
 	<key>CFBundleGetInfoString</key>
-	<string>NeuralAmpModeler v0.7.15 Copyright 2022 Steven Atkinson</string>
+	<string>DualNAM v0.1.0 Copyright 2026 Moses Da Silva; NAM portions Copyright 2022 Steven Atkinson</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.StevenAtkinson.app.NeuralAmpModeler.AUv3</string>
+	<string>com.mosesdasilva.app.DualNAM.AUv3</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>NeuralAmpModeler</string>
+	<string>DualNAM</string>
 	<key>CFBundlePackageType</key>
 	<string>XPC!</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.7.15</string>
+	<string>0.1.0</string>
 	<key>CFBundleVersion</key>
-	<string>0.7.15</string>
+	<string>0.1.0</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>10.12.0</string>
 	<key>NSExtension</key>
@@ -27,20 +27,20 @@
 		<key>NSExtensionAttributes</key>
 		<dict>
 			<key>AudioComponentBundle</key>
-			<string>com.StevenAtkinson.app.NeuralAmpModeler.AUv3Framework</string>
+			<string>com.mosesdasilva.app.DualNAM.AUv3Framework</string>
 			<key>AudioComponents</key>
 			<array>
 				<dict>
 					<key>description</key>
-					<string>NeuralAmpModeler</string>
+					<string>DualNAM</string>
 					<key>manufacturer</key>
-					<string>SDAa</string>
+					<string>MoDa</string>
 					<key>name</key>
-					<string>Steven Atkinson: NeuralAmpModeler</string>
+					<string>Moses Da Silva: DualNAM</string>
 					<key>sandboxSafe</key>
 					<true/>
 					<key>subtype</key>
-					<string>1YEo</string>
+					<string>DuNM</string>
 					<key>tags</key>
 					<array>
 						<string>Effects</string>
@@ -48,7 +48,7 @@
 					<key>type</key>
 					<string>aufx</string>
 					<key>version</key>
-					<integer>1807</integer>
+					<integer>256</integer>
 				</dict>
 			</array>
 		</dict>

@@ -21,12 +21,15 @@ DualNAM is currently in early development. The first stereo-routing increment
 is implemented and tested:
 
 - left input is routed to model slot A and the left output;
-- right input is reserved for model slot B and the right output;
+- right input is routed to model slot B and the right output;
+- model slots stage, activate, reset, clear, and report latency independently;
+- separate model browsers load and clear slots A and B;
+- project state stores both model paths and reads legacy NAM state into slot A;
 - an unloaded slot is silent.
 
-The existing upstream model browser currently loads slot A only. Slot B
-loading, independent gains, state, branding, and the final UI are not yet
-implemented.
+The installed bundles now use the DualNAM name, version `0.1.0`, and unique
+VST3/AUv2 identifiers. Independent A/B gains, latency compensation, and the
+final UI are not yet implemented.
 
 The current plan is documented in
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
@@ -71,7 +74,7 @@ cd ..
 ./download-prebuilt-libs.sh
 ```
 
-Build and validate the unmodified upstream VST3/AUv2 baseline:
+Build and validate the current DualNAM VST3/AUv2 development bundles:
 
 ```sh
 ./scripts/verify-baseline-macos.sh
@@ -79,8 +82,12 @@ Build and validate the unmodified upstream VST3/AUv2 baseline:
 
 The script uses the `macOS-VST3` and `macOS-AUv2` schemes from
 `NeuralAmpModeler/projects/NeuralAmpModeler-macOS.xcodeproj`. It installs
-unsigned local-development bundles into the user's VST3 and Components folders
-and runs Apple's AU validator.
+unsigned `DualNAM.vst3` and `DualNAM.component` development bundles into the
+user's plug-in folders, verifies their identifiers, and runs Apple's AU
+validator.
+
+The Xcode target, source class, and plist filenames intentionally retain their
+upstream names for now. Hosts see the unique DualNAM bundle names and IDs.
 
 Run the focused routing tests:
 

@@ -1,18 +1,18 @@
-#define PLUG_NAME "NeuralAmpModeler"
-#define PLUG_MFR "Steven Atkinson"
-#define PLUG_VERSION_HEX 0x0000070f
-#define PLUG_VERSION_STR "0.7.15"
-#define PLUG_UNIQUE_ID '1YEo'
-#define PLUG_MFR_ID 'SDAa'
-#define PLUG_URL_STR "https://github.com/sdatkinson/NeuralAmpModelerPlugin"
-#define PLUG_EMAIL_STR "spam@me.com"
-#define PLUG_COPYRIGHT_STR "Copyright 2022 Steven Atkinson"
+#define PLUG_NAME "DualNAM"
+#define PLUG_MFR "Moses Da Silva"
+#define PLUG_VERSION_HEX 0x00000100
+#define PLUG_VERSION_STR "0.1.0"
+#define PLUG_UNIQUE_ID 'DuNM'
+#define PLUG_MFR_ID 'MoDa'
+#define PLUG_URL_STR "https://github.com/mosesdasilva/DualNAM"
+#define PLUG_EMAIL_STR ""
+#define PLUG_COPYRIGHT_STR "Copyright 2026 Moses Da Silva; NAM portions Copyright 2022 Steven Atkinson"
 #define PLUG_CLASS_NAME NeuralAmpModeler
-#define BUNDLE_NAME "NeuralAmpModeler"
-#define BUNDLE_MFR "StevenAtkinson"
+#define BUNDLE_NAME "DualNAM"
+#define BUNDLE_MFR "mosesdasilva"
 #define BUNDLE_DOMAIN "com"
 
-#define SHARED_RESOURCES_SUBPATH "NeuralAmpModeler"
+#define SHARED_RESOURCES_SUBPATH "DualNAM"
 
 #ifdef APP_API
   #define PLUG_CHANNEL_IO "1-2"
@@ -44,7 +44,7 @@
 #define AAX_TYPE_IDS 'ITP1'
 #define AAX_TYPE_IDS_AUDIOSUITE 'ITA1'
 #define AAX_PLUG_MFR_STR "Acme"
-#define AAX_PLUG_NAME_STR "NeuralAmpModeler\nIPEF"
+#define AAX_PLUG_NAME_STR "DualNAM\nIPEF"
 #define AAX_PLUG_CATEGORY_STR "Effect"
 #define AAX_DOES_AUDIOSUITE 1
 
