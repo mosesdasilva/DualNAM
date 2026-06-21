@@ -118,8 +118,9 @@ Progress:
   maximum branch latency reporting, separate A/B model browsers and paths,
   versioned DualNAM state with legacy slot-A migration, unique DualNAM VST3/AUv2
   bundle identity, VST3/AUv2 builds, and AU validation.
-- Remaining before controlled host testing: manually verify two-model
-  save/reopen behavior in Gig Performer.
+- Controlled Gig Performer testing completed successfully: independent capture
+  selection, changing, clearing, save/close/reopen restoration, shared input
+  control, EQ, and noise gate all worked as intended.
 - Remaining before production use: add independent gains, compensate unequal
   branch latency, validate VST3 in a host/pluginval, and move model retirement
   off the audio thread.

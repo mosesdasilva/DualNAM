@@ -34,6 +34,10 @@ final UI are not yet implemented.
 The current plan is documented in
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
 
+For a beginner-oriented explanation of the architecture, C++ concepts, signal
+flow, state handling, tests, and development history, read
+[`docs/PROJECT_WALKTHROUGH.md`](docs/PROJECT_WALKTHROUGH.md).
+
 ## Upstream projects
 
 DualNAM starts from and preserves the history of:
