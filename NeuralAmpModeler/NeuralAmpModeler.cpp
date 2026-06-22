@@ -98,6 +98,14 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
   GetParam(kModelBInputLevel)->InitGain("Input B", 0.0, -20.0, 20.0, 0.1);
   GetParam(kModelAOutputLevel)->InitGain("Output A", 0.0, -40.0, 40.0, 0.1);
   GetParam(kModelBOutputLevel)->InitGain("Output B", 0.0, -40.0, 40.0, 0.1);
+  GetParam(kModelAEQActive)->InitBool("EQ A", true);
+  GetParam(kModelABass)->InitDouble("Bass A", 5.0, 0.0, 10.0, 0.1);
+  GetParam(kModelAMid)->InitDouble("Middle A", 5.0, 0.0, 10.0, 0.1);
+  GetParam(kModelATreble)->InitDouble("Treble A", 5.0, 0.0, 10.0, 0.1);
+  GetParam(kModelBEQActive)->InitBool("EQ B", true);
+  GetParam(kModelBBass)->InitDouble("Bass B", 5.0, 0.0, 10.0, 0.1);
+  GetParam(kModelBMid)->InitDouble("Middle B", 5.0, 0.0, 10.0, 0.1);
+  GetParam(kModelBTreble)->InitDouble("Treble B", 5.0, 0.0, 10.0, 0.1);
 
   mNoiseGateTrigger.AddListener(&mNoiseGateGain);
 
@@ -209,7 +217,9 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     auto attachChannelPanel = [&](const IRECT& panelBounds, const char* channelTitle, const dualnam::ModelSlot modelSlot,
                                   const int modelInputParam, const int modelOutputParam, const int modelBrowserTag,
                                   const int clearModelMessage, const char* defaultModelString, const int inputMeterTag,
-                                  const int outputMeterTag, const bool sharedControlsActive) {
+                                  const int outputMeterTag, const int eqActiveParam, const int bassParam,
+                                  const int midParam, const int trebleParam, const char* eqGroup,
+                                  const bool sharedControlsActive) {
       const auto mainArea = panelBounds.GetPadded(-20);
       const auto contentArea = mainArea.GetPadded(-10);
       const auto titleHeight = 50.0f;
@@ -270,21 +280,21 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
 
       auto* noiseGateSwitch =
         new NAMSwitchControl(ngToggleArea, kNoiseGateActive, "Noise Gate", style, switchHandleBitmap);
-      auto* eqSwitch = new NAMSwitchControl(eqToggleArea, kEQActive, "EQ", style, switchHandleBitmap);
+      auto* eqSwitch = new NAMSwitchControl(eqToggleArea, eqActiveParam, "EQ", style, switchHandleBitmap);
       pGraphics->AttachControl(noiseGateSwitch);
       pGraphics->AttachControl(eqSwitch);
 
       pGraphics->AttachControl(new NAMKnobControl(inputKnobArea, modelInputParam, "", style, knobBackgroundBitmap));
       auto* noiseGateKnob =
         new NAMKnobControl(noiseGateArea, kNoiseGateThreshold, "", style, knobBackgroundBitmap);
-      auto* bassKnob = new NAMKnobControl(bassKnobArea, kToneBass, "", style, knobBackgroundBitmap);
-      auto* midKnob = new NAMKnobControl(midKnobArea, kToneMid, "", style, knobBackgroundBitmap);
-      auto* trebleKnob = new NAMKnobControl(trebleKnobArea, kToneTreble, "", style, knobBackgroundBitmap);
+      auto* bassKnob = new NAMKnobControl(bassKnobArea, bassParam, "", style, knobBackgroundBitmap);
+      auto* midKnob = new NAMKnobControl(midKnobArea, midParam, "", style, knobBackgroundBitmap);
+      auto* trebleKnob = new NAMKnobControl(trebleKnobArea, trebleParam, "", style, knobBackgroundBitmap);
       auto* outputKnob = new NAMKnobControl(outputKnobArea, modelOutputParam, "", style, knobBackgroundBitmap);
       pGraphics->AttachControl(noiseGateKnob);
-      pGraphics->AttachControl(bassKnob, -1, sharedControlsActive ? "EQ_KNOBS" : "CHANNEL_B_PLACEHOLDERS");
-      pGraphics->AttachControl(midKnob, -1, sharedControlsActive ? "EQ_KNOBS" : "CHANNEL_B_PLACEHOLDERS");
-      pGraphics->AttachControl(trebleKnob, -1, sharedControlsActive ? "EQ_KNOBS" : "CHANNEL_B_PLACEHOLDERS");
+      pGraphics->AttachControl(bassKnob, -1, eqGroup);
+      pGraphics->AttachControl(midKnob, -1, eqGroup);
+      pGraphics->AttachControl(trebleKnob, -1, eqGroup);
       pGraphics->AttachControl(outputKnob);
 
       auto* inputMeter = new NAMMeterControl(inputMeterArea, meterBackgroundBitmap, style);
@@ -297,21 +307,19 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
         irSwitch->SetDisabled(true);
         irBrowser->SetDisabled(true);
         noiseGateSwitch->SetDisabled(true);
-        eqSwitch->SetDisabled(true);
         noiseGateKnob->SetDisabled(true);
-        bassKnob->SetDisabled(true);
-        midKnob->SetDisabled(true);
-        trebleKnob->SetDisabled(true);
       }
     };
 
     const auto channelPanelWidth = b.W() / 2.0f;
     attachChannelPanel(b.GetFromLeft(channelPanelWidth), "CHANNEL A", dualnam::ModelSlot::A, kModelAInputLevel,
                        kModelAOutputLevel, kCtrlTagModelAFileBrowser, kMsgTagClearModelA,
-                       defaultNamAFileString.c_str(), kCtrlTagInputMeterA, kCtrlTagOutputMeterA, true);
+                       defaultNamAFileString.c_str(), kCtrlTagInputMeterA, kCtrlTagOutputMeterA, kModelAEQActive,
+                       kModelABass, kModelAMid, kModelATreble, "EQ_A_KNOBS", true);
     attachChannelPanel(b.GetFromRight(channelPanelWidth), "CHANNEL B", dualnam::ModelSlot::B, kModelBInputLevel,
                        kModelBOutputLevel, kCtrlTagModelBFileBrowser, kMsgTagClearModelB,
-                       defaultNamBFileString.c_str(), kCtrlTagInputMeterB, kCtrlTagOutputMeterB, false);
+                       defaultNamBFileString.c_str(), kCtrlTagInputMeterB, kCtrlTagOutputMeterB, kModelBEQActive,
+                       kModelBBass, kModelBMid, kModelBTreble, "EQ_B_KNOBS", false);
 
     // Settings/help/about box
     pGraphics->AttachControl(new NAMCircleButtonControl(
@@ -367,7 +375,8 @@ void NeuralAmpModeler::ProcessBlock(iplug::sample** inputs, iplug::sample** outp
   _ProcessInput(inputs, numFrames, numChannelsExternalIn, numChannelsInternal);
   _ApplyDSPStaging();
   const bool noiseGateActive = GetParam(kNoiseGateActive)->Value();
-  const bool toneStackActive = GetParam(kEQActive)->Value();
+  const bool toneStackActive[dualnam::kStereoChannels]{GetParam(kModelAEQActive)->Bool(),
+                                                       GetParam(kModelBEQActive)->Bool()};
 
   // Noise gate trigger
   sample** triggerOutput = mInputPointers;
@@ -397,9 +406,11 @@ void NeuralAmpModeler::ProcessBlock(iplug::sample** inputs, iplug::sample** outp
   sample** gateGainOutput =
     noiseGateActive ? mNoiseGateGain.Process(mOutputPointers, numChannelsInternal, numFrames) : mOutputPointers;
 
-  sample** toneStackOutPointers = (toneStackActive && mToneStack != nullptr)
-                                    ? mToneStack->Process(gateGainOutput, numChannelsInternal, nFrames)
-                                    : gateGainOutput;
+  sample* toneStackOutPointers[dualnam::kStereoChannels]{};
+  dsp::tone_stack::AbstractToneStack* toneStacks[dualnam::kStereoChannels]{
+    mToneStacks[static_cast<size_t>(dualnam::ModelSlot::A)].get(),
+    mToneStacks[static_cast<size_t>(dualnam::ModelSlot::B)].get()};
+  dualnam::RouteStereoEffects(gateGainOutput, toneStackOutPointers, nFrames, toneStacks, toneStackActive);
 
   sample** irPointers = toneStackOutPointers;
   if (mIR != nullptr && GetParam(kIRToggle)->Value())
@@ -443,7 +454,8 @@ void NeuralAmpModeler::OnReset()
   mOutputSenderB.Reset(sampleRate);
   // If there is a model or IR loaded, they need to be checked for resampling.
   _ResetModelAndIR(sampleRate, GetBlockSize());
-  mToneStack->Reset(sampleRate, maxBlockSize);
+  for (auto& toneStack : mToneStacks)
+    toneStack->Reset(sampleRate, maxBlockSize);
   _UpdateLatency();
 }
 
@@ -558,10 +570,13 @@ void NeuralAmpModeler::OnParamChange(int paramIdx)
     // Changes to the output gain
     case kModelAOutputLevel:
     case kModelBOutputLevel: _SetModelOutputGains(); break;
-    // Tone stack:
-    case kToneBass: mToneStack->SetParam("bass", GetParam(paramIdx)->Value()); break;
-    case kToneMid: mToneStack->SetParam("middle", GetParam(paramIdx)->Value()); break;
-    case kToneTreble: mToneStack->SetParam("treble", GetParam(paramIdx)->Value()); break;
+    // Independent tone stacks:
+    case kModelABass: mToneStacks[0]->SetParam("bass", GetParam(paramIdx)->Value()); break;
+    case kModelAMid: mToneStacks[0]->SetParam("middle", GetParam(paramIdx)->Value()); break;
+    case kModelATreble: mToneStacks[0]->SetParam("treble", GetParam(paramIdx)->Value()); break;
+    case kModelBBass: mToneStacks[1]->SetParam("bass", GetParam(paramIdx)->Value()); break;
+    case kModelBMid: mToneStacks[1]->SetParam("middle", GetParam(paramIdx)->Value()); break;
+    case kModelBTreble: mToneStacks[1]->SetParam("treble", GetParam(paramIdx)->Value()); break;
     case kSlim: _ApplySlimParamToLoadedNAMs(); break;
     default: break;
   }
@@ -576,8 +591,11 @@ void NeuralAmpModeler::OnParamChangeUI(int paramIdx, EParamSource source)
     switch (paramIdx)
     {
       case kNoiseGateActive: pGraphics->GetControlWithParamIdx(kNoiseGateThreshold)->SetDisabled(!active); break;
-      case kEQActive:
-        pGraphics->ForControlInGroup("EQ_KNOBS", [active](IControl* pControl) { pControl->SetDisabled(!active); });
+      case kModelAEQActive:
+        pGraphics->ForControlInGroup("EQ_A_KNOBS", [active](IControl* pControl) { pControl->SetDisabled(!active); });
+        break;
+      case kModelBEQActive:
+        pGraphics->ForControlInGroup("EQ_B_KNOBS", [active](IControl* pControl) { pControl->SetDisabled(!active); });
         break;
       case kIRToggle: pGraphics->GetControlWithTag(kCtrlTagIRFileBrowser)->SetDisabled(!active); break;
       default: break;
@@ -859,8 +877,8 @@ size_t NeuralAmpModeler::_GetBufferNumFrames() const
 
 void NeuralAmpModeler::_InitToneStack()
 {
-  // If you want to customize the tone stack, then put it here!
-  mToneStack = std::make_unique<dsp::tone_stack::BasicNamToneStack>();
+  for (auto& toneStack : mToneStacks)
+    toneStack = std::make_unique<dsp::tone_stack::BasicNamToneStack>();
 }
 void NeuralAmpModeler::_PrepareBuffers(const size_t numChannels, const size_t numFrames)
 {

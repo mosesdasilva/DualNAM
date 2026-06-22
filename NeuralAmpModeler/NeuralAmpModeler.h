@@ -40,7 +40,8 @@ enum EParams
   kToneMid,
   kToneTreble,
   // Reserved for compatibility with sessions created before independent
-  // outputs. It is no longer used by the active DSP or main editor.
+  // branch EQ/output controls. These are no longer used by the active DSP or
+  // main editor.
   kOutputLevel,
   // The rest is fine though.
   kNoiseGateActive,
@@ -56,6 +57,14 @@ enum EParams
   kModelBInputLevel,
   kModelAOutputLevel,
   kModelBOutputLevel,
+  kModelAEQActive,
+  kModelABass,
+  kModelAMid,
+  kModelATreble,
+  kModelBEQActive,
+  kModelBBass,
+  kModelBMid,
+  kModelBTreble,
   kNumParams
 };
 
@@ -321,8 +330,8 @@ private:
   std::atomic<bool> mNewModelLoadedInDSP = false;
   std::atomic<bool> mModelCleared = false;
 
-  // Tone stack modules
-  std::unique_ptr<dsp::tone_stack::AbstractToneStack> mToneStack;
+  // Independent tone stack modules for model branches A and B.
+  std::unique_ptr<dsp::tone_stack::AbstractToneStack> mToneStacks[dualnam::kStereoChannels];
 
   // Post-IR filters
   recursive_linear_filter::HighPass mHighPass;

@@ -18,8 +18,8 @@ void Require(const bool condition, const char* message)
 void TestDualNAMUsesItsOwnStateHeader()
 {
   Require(std::string(dualnam::state::kHeader) == "###DualNAM###", "DualNAM state header must be stable");
-  Require(std::string(dualnam::state::kSchemaVersion) == "3",
-          "schema version 3 must include independent A/B output gains");
+  Require(std::string(dualnam::state::kSchemaVersion) == "4",
+          "schema version 4 must include independent A/B EQ parameters");
   Require(std::string(dualnam::state::kHeader) != dualnam::state::kLegacyNAMHeader,
           "DualNAM state must not be written with the upstream NAM header");
 }
@@ -47,6 +47,16 @@ void TestLegacySharedOutputMigratesToBothBranches()
   Require(gains.outputA == -6.0, "legacy shared output must migrate to output A");
   Require(gains.outputB == -6.0, "legacy shared output must migrate to output B");
 }
+
+void TestLegacySharedEQMigratesToBothBranches()
+{
+  const auto eq = dualnam::state::EQSettings::FromLegacy(true, 3.0, 4.0, 7.0);
+
+  Require(eq.activeA && eq.activeB, "legacy shared EQ active state must migrate to both branches");
+  Require(eq.bassA == 3.0 && eq.bassB == 3.0, "legacy bass must migrate to both branches");
+  Require(eq.middleA == 4.0 && eq.middleB == 4.0, "legacy middle must migrate to both branches");
+  Require(eq.trebleA == 7.0 && eq.trebleB == 7.0, "legacy treble must migrate to both branches");
+}
 } // namespace
 
 int main()
@@ -55,6 +65,7 @@ int main()
   TestLegacyStateMapsOnlyToSlotA();
   TestDualPathsRemainIndependent();
   TestLegacySharedOutputMigratesToBothBranches();
+  TestLegacySharedEQMigratesToBothBranches();
   std::cout << "DualNAM state tests passed\n";
   return EXIT_SUCCESS;
 }

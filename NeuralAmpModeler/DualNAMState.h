@@ -7,7 +7,7 @@ namespace dualnam::state
 {
 inline constexpr char kHeader[] = "###DualNAM###";
 inline constexpr char kLegacyNAMHeader[] = "###NeuralAmpModeler###";
-inline constexpr char kSchemaVersion[] = "3";
+inline constexpr char kSchemaVersion[] = "4";
 
 struct ModelPaths
 {
@@ -23,5 +23,22 @@ struct OutputGains
   double outputB;
 
   static OutputGains FromLegacy(const double sharedOutput) { return {sharedOutput, sharedOutput}; }
+};
+
+struct EQSettings
+{
+  bool activeA;
+  double bassA;
+  double middleA;
+  double trebleA;
+  bool activeB;
+  double bassB;
+  double middleB;
+  double trebleB;
+
+  static EQSettings FromLegacy(const bool active, const double bass, const double middle, const double treble)
+  {
+    return {active, bass, middle, treble, active, bass, middle, treble};
+  }
 };
 } // namespace dualnam::state

@@ -38,6 +38,21 @@ void ApplyStereoOutputGains(Sample** inputs, Sample** outputs, const int numFram
   }
 }
 
+template <typename Sample, typename Effect>
+void RouteStereoEffects(Sample** inputs, Sample** outputs, const int numFrames,
+                        Effect* const (&effects)[kStereoChannels], const bool (&enabled)[kStereoChannels])
+{
+  for (std::size_t channel = 0; channel < kStereoChannels; ++channel)
+  {
+    outputs[channel] = inputs[channel];
+    if (!enabled[channel] || effects[channel] == nullptr)
+      continue;
+
+    Sample* monoInput[1]{inputs[channel]};
+    outputs[channel] = effects[channel]->Process(monoInput, 1, numFrames)[0];
+  }
+}
+
 template <typename Sample, typename Model>
 void ProcessStereoModels(Sample** inputs, Sample** outputs, const int numFrames,
                          Model* const (&models)[kStereoChannels])

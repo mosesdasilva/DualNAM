@@ -38,11 +38,13 @@ is implemented and tested:
 - each panel has independent input and output meters: input meters observe the
   signal after `Input A/B`, and output meters observe the final signal after
   `Output A/B`;
+- each panel has an independent EQ switch and independent Bass, Middle, and
+  Treble controls, backed by separate mono tone-stack DSP instances;
 - an unloaded slot is silent.
 
 The installed bundles now use the DualNAM name, version `0.1.0`, and unique
-VST3/AUv2 identifiers. Independent A/B EQ, latency compensation, and the final
-control implementations are not yet implemented.
+VST3/AUv2 identifiers. Independent noise gates and IRs, latency compensation,
+and the final control implementations are not yet implemented.
 
 The current plan is documented in
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).

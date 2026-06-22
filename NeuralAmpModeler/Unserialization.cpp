@@ -33,6 +33,25 @@ void NeuralAmpModeler::_UnserializeApplyConfig(nlohmann::json& config)
     config["Output A"] = legacyOutputs.outputA;
   if (config.find("Output B") == config.end())
     config["Output B"] = legacyOutputs.outputB;
+  const auto legacyEQ = dualnam::state::EQSettings::FromLegacy(
+    config.value("ToneStack", 1.0) != 0.0, config.value("Bass", 5.0), config.value("Middle", 5.0),
+    config.value("Treble", 5.0));
+  if (config.find("EQ A") == config.end())
+    config["EQ A"] = legacyEQ.activeA;
+  if (config.find("Bass A") == config.end())
+    config["Bass A"] = legacyEQ.bassA;
+  if (config.find("Middle A") == config.end())
+    config["Middle A"] = legacyEQ.middleA;
+  if (config.find("Treble A") == config.end())
+    config["Treble A"] = legacyEQ.trebleA;
+  if (config.find("EQ B") == config.end())
+    config["EQ B"] = legacyEQ.activeB;
+  if (config.find("Bass B") == config.end())
+    config["Bass B"] = legacyEQ.bassB;
+  if (config.find("Middle B") == config.end())
+    config["Middle B"] = legacyEQ.middleB;
+  if (config.find("Treble B") == config.end())
+    config["Treble B"] = legacyEQ.trebleB;
 
   auto getParamByName = [&](std::string& name) {
     // Could use a map but eh
@@ -322,7 +341,7 @@ int NeuralAmpModeler::_UnserializeDualNAMState(const iplug::IByteChunk& chunk, i
   WDL_String schemaVersion;
   pos = chunk.GetStr(schemaVersion, pos);
   const std::string schema(schemaVersion.Get());
-  if (schema != "1" && schema != "2" && schema != dualnam::state::kSchemaVersion)
+  if (schema != "1" && schema != "2" && schema != "3" && schema != dualnam::state::kSchemaVersion)
     return -1;
 
   nlohmann::json config;
@@ -347,15 +366,26 @@ int NeuralAmpModeler::_UnserializeDualNAMState(const iplug::IByteChunk& chunk, i
                                       "InputCalibrationLevel",
                                       "OutputMode",
                                       "Slim"};
-  if (schema == "2" || schema == dualnam::state::kSchemaVersion)
+  if (schema == "2" || schema == "3" || schema == dualnam::state::kSchemaVersion)
   {
     paramNames.push_back("Input A");
     paramNames.push_back("Input B");
   }
-  if (schema == dualnam::state::kSchemaVersion)
+  if (schema == "3" || schema == dualnam::state::kSchemaVersion)
   {
     paramNames.push_back("Output A");
     paramNames.push_back("Output B");
+  }
+  if (schema == dualnam::state::kSchemaVersion)
+  {
+    paramNames.push_back("EQ A");
+    paramNames.push_back("Bass A");
+    paramNames.push_back("Middle A");
+    paramNames.push_back("Treble A");
+    paramNames.push_back("EQ B");
+    paramNames.push_back("Bass B");
+    paramNames.push_back("Middle B");
+    paramNames.push_back("Treble B");
   }
   for (const auto& paramName : paramNames)
   {

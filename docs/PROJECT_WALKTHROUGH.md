@@ -412,7 +412,7 @@ host inputs
   -> independent Input A / Input B gain
   -> NAM A and NAM B
   -> noise-gate gain
-  -> shared tone stack / EQ
+  -> independent EQ A / EQ B tone stacks
   -> inherited IR stage, when active
   -> DC-blocking high-pass filter
   -> independent Output A / Output B gain
@@ -647,12 +647,41 @@ Both use the same generic loader logic. The slot argument determines:
 This is an example of avoiding duplication without building a large
 abstraction.
 
-The inherited noise gate, EQ, IR, meters, and slimming controls are not
-yet independent DSP paths. Channel A keeps the existing shared controls
-functional so no established capability is lost. Matching Channel B controls
-are visible but disabled. This makes their intended locations explicit without
+The inherited noise gate, IR, and slimming controls are not yet independent DSP
+paths. Channel A keeps those existing shared controls functional so no
+established capability is lost. Matching Channel B controls are visible but
+disabled. This makes their intended locations explicit without
 misrepresenting them as implemented. The Channel B IR browser follows the same
 rule: it is a visual placeholder until a second IR object and state path exist.
+
+### Independent EQ
+
+Each branch owns a separate `BasicNamToneStack`:
+
+```cpp
+std::unique_ptr<AbstractToneStack> mToneStacks[2];
+```
+
+The routing helper passes only one mono channel to each instance:
+
+```cpp
+dualnam::RouteStereoEffects(
+  postModelChannels,
+  toneStackOutputs,
+  numFrames,
+  toneStacks,
+  toneStackEnabled);
+```
+
+EQ A cannot read or modify channel B, and EQ B cannot read or modify channel A.
+Each side has an independent switch plus Bass, Middle, and Treble values from
+0 to 10, defaulting to 5.
+
+The original shared `ToneStack`, `Bass`, `Middle`, and `Treble` parameter IDs
+remain allocated for existing host automation compatibility, but they no
+longer control active DSP. State schema 4 stores the eight new EQ parameters.
+When an older state is opened, its shared EQ settings are copied to both
+branches.
 
 ### Independent output gains
 
@@ -710,14 +739,15 @@ their paths and reloads them.
 inline constexpr char kHeader[] = "###DualNAM###";
 inline constexpr char kLegacyNAMHeader[] =
   "###NeuralAmpModeler###";
-inline constexpr char kSchemaVersion[] = "2";
+inline constexpr char kSchemaVersion[] = "4";
 ```
 
 The header answers “what kind of state is this?” The schema version answers
 “which layout does this state use?”
 
-Schema 2 adds `Input A` and `Input B`. Schema 1 and older upstream state remain
-readable; missing branch trims are restored to their 0 dB defaults.
+Schema 2 added `Input A/B`, schema 3 added `Output A/B`, and schema 4 adds
+independent EQ A/B settings. Earlier schemas remain readable and migrate shared
+values into both branches where appropriate.
 
 ### Serialization
 
@@ -1054,6 +1084,7 @@ queue.
 - independent pre-model Input A and Input B gain parameters;
 - independent post-processing Output A and Output B gain parameters;
 - independent input and output meters for Channel A and Channel B;
+- independent EQ switches and Bass/Middle/Treble controls for both branches;
 - mirrored 1200x400 Channel A/Channel B editor;
 - functional model browser and branch input control on both panels;
 - disabled Channel B placeholders for future independent processing;
@@ -1066,7 +1097,6 @@ queue.
 
 ### Not yet implemented
 
-- independent A/B EQ;
 - selectable stereo/mono-duplicated input mode;
 - internal delay compensation when A/B branch latencies differ;
 - off-audio-thread retired-model destruction;

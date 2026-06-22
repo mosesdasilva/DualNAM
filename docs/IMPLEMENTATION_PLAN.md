@@ -151,13 +151,17 @@ Progress:
   consists of two identical 600x400 channel panels. Model loading, branch input
   gain, branch output gain, and mono input/output meters are functional on both
   panels. Each input meter reads its branch after Input A/B; each output meter
-  reads its final host channel after Output A/B. Channel A retains access to
-  the inherited shared processing, while the corresponding Channel B controls
-  and second IR selector are disabled placeholders for future independent
-  implementations.
+  reads its final host channel after Output A/B. Independent EQ switches and
+  Bass/Middle/Treble parameters were appended as IDs 17 through 24. Each branch
+  owns a separate mono tone-stack DSP instance. Schema version 4 persists the
+  eight EQ parameters; older shared EQ values migrate into both branches.
+  Legacy Bass/Middle/Treble/ToneStack parameter IDs remain reserved for host
+  compatibility but no longer drive active DSP. Channel A retains access to
+  the inherited shared noise gate and IR, while the corresponding Channel B
+  controls and second IR selector remain disabled placeholders.
 - Remaining: another manual host save/reopen verification for the new controls.
-  Replace placeholders one behavior at a time as independent gate, EQ, and IR
-  paths are implemented. Add the planned global input/output controls
+  Replace placeholders one behavior at a time as independent gate and IR paths
+  are implemented. Add the planned global input/output controls
   above the channel strip only after their behavior and required editor height
   are designed.
 

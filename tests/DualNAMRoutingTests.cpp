@@ -28,6 +28,31 @@ private:
   double mGain;
 };
 
+class GainEffect
+{
+public:
+  explicit GainEffect(const double gain)
+  : mGain(gain)
+  {
+  }
+
+  double** Process(double** inputs, const int numChannels, const int numFrames)
+  {
+    if (numChannels != 1)
+      std::exit(EXIT_FAILURE);
+
+    for (int frame = 0; frame < numFrames; ++frame)
+      mOutput[frame] = mGain * inputs[0][frame];
+    mOutputPointer = mOutput.data();
+    return &mOutputPointer;
+  }
+
+private:
+  double mGain;
+  std::array<double, kFrames> mOutput{};
+  double* mOutputPointer = nullptr;
+};
+
 void RequireNear(const double actual, const double expected, const char* message)
 {
   if (std::abs(actual - expected) <= kTolerance)
@@ -143,6 +168,46 @@ void TestSelectsIndependentChannelsForMetering()
   RequireNear(dualnam::StereoChannelPointer(channels, 0)[2], 3.0, "meter A must read only channel A");
   RequireNear(dualnam::StereoChannelPointer(channels, 1)[2], 30.0, "meter B must read only channel B");
 }
+
+void TestProcessesStereoBranchesThroughIndependentEffects()
+{
+  std::array<double, kFrames> leftInput{1.0, 2.0, 3.0, 4.0};
+  std::array<double, kFrames> rightInput{10.0, 20.0, 30.0, 40.0};
+  double* inputs[2]{leftInput.data(), rightInput.data()};
+  double* outputs[2]{};
+  GainEffect effectA(2.0);
+  GainEffect effectB(0.25);
+  GainEffect* effects[2]{&effectA, &effectB};
+  const bool enabled[2]{true, true};
+
+  dualnam::RouteStereoEffects(inputs, outputs, kFrames, effects, enabled);
+
+  for (int frame = 0; frame < kFrames; ++frame)
+  {
+    RequireNear(outputs[0][frame], 2.0 * leftInput[frame], "EQ A must process only channel A");
+    RequireNear(outputs[1][frame], 0.25 * rightInput[frame], "EQ B must process only channel B");
+  }
+}
+
+void TestBypassesEachStereoEffectIndependently()
+{
+  std::array<double, kFrames> leftInput{1.0, 2.0, 3.0, 4.0};
+  std::array<double, kFrames> rightInput{10.0, 20.0, 30.0, 40.0};
+  double* inputs[2]{leftInput.data(), rightInput.data()};
+  double* outputs[2]{};
+  GainEffect effectA(2.0);
+  GainEffect effectB(0.25);
+  GainEffect* effects[2]{&effectA, &effectB};
+  const bool enabled[2]{false, true};
+
+  dualnam::RouteStereoEffects(inputs, outputs, kFrames, effects, enabled);
+
+  for (int frame = 0; frame < kFrames; ++frame)
+  {
+    RequireNear(outputs[0][frame], leftInput[frame], "bypassed EQ A must leave channel A unchanged");
+    RequireNear(outputs[1][frame], 0.25 * rightInput[frame], "enabled EQ B must still process channel B");
+  }
+}
 } // namespace
 
 int main()
@@ -153,6 +218,8 @@ int main()
   TestConvertsInputGainDecibelsToLinearAmplitude();
   TestAppliesIndependentOutputGainsAfterProcessing();
   TestSelectsIndependentChannelsForMetering();
+  TestProcessesStereoBranchesThroughIndependentEffects();
+  TestBypassesEachStereoEffectIndependently();
   std::cout << "DualNAM routing tests passed\n";
   return EXIT_SUCCESS;
 }
