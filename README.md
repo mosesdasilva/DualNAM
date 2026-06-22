@@ -30,8 +30,8 @@ is implemented and tested:
 - independent `Output A` and `Output B` trims feed the left and right host
   outputs respectively, each ranging from -40 dB to +40 dB with a 0 dB
   default;
-- the editor is a 1200x400 two-panel layout, with Channel A on the left and
-  Channel B on the right;
+- the editor is a 1200x520 layout with a shared 120-pixel strip above the
+  Channel A and Channel B panels;
 - both panels have matching control positions; model loading, branch input
   gain, and branch output gain are active on both sides, while unimplemented
   Channel B processing controls are disabled placeholders;
@@ -40,11 +40,13 @@ is implemented and tested:
   `Output A/B`;
 - each panel has an independent EQ switch and independent Bass, Middle, and
   Treble controls, backed by separate mono tone-stack DSP instances;
+- the top strip contains Global Input, the shared stereo Noise Gate threshold
+  and toggle, and Global Output after the two branch output gains;
 - an unloaded slot is silent.
 
 The installed bundles now use the DualNAM name, version `0.1.0`, and unique
-VST3/AUv2 identifiers. Independent noise gates and IRs, latency compensation,
-and the final control implementations are not yet implemented.
+VST3/AUv2 identifiers. Independent IRs, latency compensation, and the final
+control implementations are not yet implemented.
 
 The current plan is documented in
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).

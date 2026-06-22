@@ -28,11 +28,15 @@ void NeuralAmpModeler::_UnserializeApplyConfig(nlohmann::json& config)
     config["Input A"] = 0.0;
   if (config.find("Input B") == config.end())
     config["Input B"] = 0.0;
+  const bool hasBranchOutputs =
+    config.find("Output A") != config.end() && config.find("Output B") != config.end();
   const auto legacyOutputs = dualnam::state::OutputGains::FromLegacy(config.value("Output", 0.0));
   if (config.find("Output A") == config.end())
     config["Output A"] = legacyOutputs.outputA;
   if (config.find("Output B") == config.end())
     config["Output B"] = legacyOutputs.outputB;
+  if (!hasBranchOutputs)
+    config["Output"] = legacyOutputs.globalOutput;
   const auto legacyEQ = dualnam::state::EQSettings::FromLegacy(
     config.value("ToneStack", 1.0) != 0.0, config.value("Bass", 5.0), config.value("Middle", 5.0),
     config.value("Treble", 5.0));
@@ -341,7 +345,8 @@ int NeuralAmpModeler::_UnserializeDualNAMState(const iplug::IByteChunk& chunk, i
   WDL_String schemaVersion;
   pos = chunk.GetStr(schemaVersion, pos);
   const std::string schema(schemaVersion.Get());
-  if (schema != "1" && schema != "2" && schema != "3" && schema != dualnam::state::kSchemaVersion)
+  if (schema != "1" && schema != "2" && schema != "3" && schema != "4" &&
+      schema != dualnam::state::kSchemaVersion)
     return -1;
 
   nlohmann::json config;
@@ -366,17 +371,17 @@ int NeuralAmpModeler::_UnserializeDualNAMState(const iplug::IByteChunk& chunk, i
                                       "InputCalibrationLevel",
                                       "OutputMode",
                                       "Slim"};
-  if (schema == "2" || schema == "3" || schema == dualnam::state::kSchemaVersion)
+  if (schema == "2" || schema == "3" || schema == "4" || schema == dualnam::state::kSchemaVersion)
   {
     paramNames.push_back("Input A");
     paramNames.push_back("Input B");
   }
-  if (schema == "3" || schema == dualnam::state::kSchemaVersion)
+  if (schema == "3" || schema == "4" || schema == dualnam::state::kSchemaVersion)
   {
     paramNames.push_back("Output A");
     paramNames.push_back("Output B");
   }
-  if (schema == dualnam::state::kSchemaVersion)
+  if (schema == "4" || schema == dualnam::state::kSchemaVersion)
   {
     paramNames.push_back("EQ A");
     paramNames.push_back("Bass A");
@@ -393,6 +398,8 @@ int NeuralAmpModeler::_UnserializeDualNAMState(const iplug::IByteChunk& chunk, i
     pos = chunk.Get(&value, pos);
     config[paramName] = value;
   }
+  if (schema != dualnam::state::kSchemaVersion)
+    config["Output"] = 0.0;
 
   _UnserializeApplyConfig(config);
   return pos;

@@ -146,24 +146,26 @@ Progress:
   at their defaults. Independent output gains were appended as parameter IDs
   15 and 16 with a -40 dB to +40 dB range and 0 dB defaults. Schema version 3
   persists them; older shared Output values migrate into both branches. The
-  legacy Output parameter remains reserved for host compatibility but is no
-  longer part of active DSP or the main editor. The editor is now 1200x400 and
-  consists of two identical 600x400 channel panels. Model loading, branch input
-  gain, branch output gain, and mono input/output meters are functional on both
-  panels. Each input meter reads its branch after Input A/B; each output meter
-  reads its final host channel after Output A/B. Independent EQ switches and
+  original Output parameter remains at stable ID 5 and now serves as Global
+  Output. The editor is now 1200x520, with a 120-pixel global strip above two
+  identical 600x400 channel panels. Model loading, branch input gain, branch
+  output gain, and mono input/output meters are functional on both panels. Each
+  input meter reads its branch after Input A/B; each output meter reads its
+  final host channel after Output A/B and Global Output. Independent EQ switches and
   Bass/Middle/Treble parameters were appended as IDs 17 through 24. Each branch
   owns a separate mono tone-stack DSP instance. Schema version 4 persists the
   eight EQ parameters; older shared EQ values migrate into both branches.
   Legacy Bass/Middle/Treble/ToneStack parameter IDs remain reserved for host
-  compatibility but no longer drive active DSP. Channel A retains access to
-  the inherited shared noise gate and IR, while the corresponding Channel B
-  controls and second IR selector remain disabled placeholders.
+  compatibility but no longer drive active DSP. The editor is now 1200x520:
+  a 120-pixel shared strip above the channel panels contains Global Input, the
+  one shared stereo noise-gate threshold/toggle, and Global Output. Global
+  Output uses stable parameter ID 5 and is applied after Output A/B. Schema
+  version 5 activates that master output while migrating schemas 1 through 4
+  without applying their old shared Output value twice. Channel A retains the
+  inherited shared IR, while the Channel B IR selector remains disabled.
 - Remaining: another manual host save/reopen verification for the new controls.
-  Replace placeholders one behavior at a time as independent gate and IR paths
-  are implemented. Add the planned global input/output controls
-  above the channel strip only after their behavior and required editor height
-  are designed.
+  Replace placeholders one behavior at a time as independent IR paths are
+  implemented.
 
 ### 4. Rename and package as DualNAM
 

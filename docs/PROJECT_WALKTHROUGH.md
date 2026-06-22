@@ -406,9 +406,9 @@ The current high-level order is:
 ```text
 host inputs
   -> prepare internal buffers
-  -> shared input gain
+  -> Global Input
   -> apply pending model changes
-  -> noise-gate trigger
+  -> shared stereo noise-gate trigger
   -> independent Input A / Input B gain
   -> NAM A and NAM B
   -> noise-gate gain
@@ -416,6 +416,7 @@ host inputs
   -> inherited IR stage, when active
   -> DC-blocking high-pass filter
   -> independent Output A / Output B gain
+  -> Global Output
   -> host outputs
   -> meters
 ```
@@ -647,12 +648,29 @@ Both use the same generic loader logic. The slot argument determines:
 This is an example of avoiding duplication without building a large
 abstraction.
 
-The inherited noise gate, IR, and slimming controls are not yet independent DSP
-paths. Channel A keeps those existing shared controls functional so no
-established capability is lost. Matching Channel B controls are visible but
-disabled. This makes their intended locations explicit without
-misrepresenting them as implemented. The Channel B IR browser follows the same
-rule: it is a visual placeholder until a second IR object and state path exist.
+The noise gate is intentionally shared across both channels. Its threshold and
+toggle were removed from the channel panels and placed in the global strip.
+The inherited IR and slimming controls are not yet independent DSP paths. The
+Channel B IR browser remains a disabled visual placeholder until a second IR
+object and state path exist.
+
+### Global control strip
+
+The editor is 1200x520. A new 120-pixel strip spans the top, while the two
+mirrored channel panels retain their 600x400 dimensions below it. The strip
+contains:
+
+- Global Input before the shared gate and Input A/B;
+- one shared Gate Threshold and Noise Gate switch;
+- Global Output after Output A/B.
+
+The gain order is:
+
+```text
+Global Input -> Input A/B -> branch DSP -> Output A/B -> Global Output
+```
+
+Global Output changes final level without altering the balance between A and B.
 
 ### Independent EQ
 
@@ -699,15 +717,15 @@ dualnam::ApplyStereoOutputGains(
 `Output A` affects only the left output and `Output B` affects only the right
 output. Both range from -40 dB to +40 dB and default to unity at 0 dB.
 
-The original parameter ID 5 named `Output` remains allocated because removing
-it would shift or invalidate existing host automation. It is no longer read by
-the active DSP and no longer has a knob in the main editor. When schema 1 or 2
-state is loaded, its saved value initializes both new output gains so an older
-session begins with the same overall level:
+The original parameter ID 5 named `Output` now drives Global Output. When
+schemas 1 through 4 are loaded, their saved shared output is already
+represented by Output A/B, so migration resets Global Output to 0 dB to avoid
+applying the level twice:
 
 ```cpp
 Output A = legacy Output;
 Output B = legacy Output;
+Global Output = 0 dB;
 ```
 
 ### Independent meters
@@ -739,15 +757,15 @@ their paths and reloads them.
 inline constexpr char kHeader[] = "###DualNAM###";
 inline constexpr char kLegacyNAMHeader[] =
   "###NeuralAmpModeler###";
-inline constexpr char kSchemaVersion[] = "4";
+inline constexpr char kSchemaVersion[] = "5";
 ```
 
 The header answers “what kind of state is this?” The schema version answers
 “which layout does this state use?”
 
-Schema 2 added `Input A/B`, schema 3 added `Output A/B`, and schema 4 adds
-independent EQ A/B settings. Earlier schemas remain readable and migrate shared
-values into both branches where appropriate.
+Schema 2 added `Input A/B`, schema 3 added `Output A/B`, schema 4 added
+independent EQ A/B, and schema 5 reactivated parameter ID 5 as Global Output.
+Earlier schemas remain readable and avoid double-applying their output gain.
 
 ### Serialization
 
@@ -1085,10 +1103,11 @@ queue.
 - independent post-processing Output A and Output B gain parameters;
 - independent input and output meters for Channel A and Channel B;
 - independent EQ switches and Bass/Middle/Treble controls for both branches;
-- mirrored 1200x400 Channel A/Channel B editor;
+- 1200x520 editor with a global strip above mirrored Channel A/B panels;
+- Global Input, shared stereo noise gate, and Global Output controls;
 - functional model browser and branch input control on both panels;
 - disabled Channel B placeholders for future independent processing;
-- inherited EQ and noise gate;
+- shared stereo noise gate;
 - inherited IR functionality;
 - unique DualNAM host identity;
 - universal Intel/Apple Silicon bundles;

@@ -214,6 +214,30 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
       ui->SetAllControlsDirty();
     };
 
+    auto attachGlobalStrip = [&](const IRECT& stripBounds) {
+      const auto knobSize = 75.0f;
+      const auto knobTop = stripBounds.T + 12.0f;
+      const auto knobGap = 22.0f;
+      const auto firstKnobLeft = stripBounds.L + 35.0f;
+      const auto globalInputArea =
+        IRECT(firstKnobLeft, knobTop, firstKnobLeft + knobSize, knobTop + knobSize);
+      const auto gateThresholdArea = globalInputArea.GetHShifted(knobSize + knobGap);
+      const auto globalOutputArea = gateThresholdArea.GetHShifted(knobSize + knobGap);
+      const auto gateToggleArea =
+        IRECT(gateThresholdArea.L - 4.0f, stripBounds.B - 28.0f, gateThresholdArea.R + 4.0f, stripBounds.B - 4.0f);
+
+      pGraphics->AttachControl(new IBitmapControl(stripBounds, backgroundBitmap));
+      pGraphics->AttachControl(new IBitmapControl(stripBounds, linesBitmap));
+      pGraphics->AttachControl(
+        new NAMKnobControl(globalInputArea, kInputLevel, "GLOBAL INPUT", style, knobBackgroundBitmap));
+      pGraphics->AttachControl(
+        new NAMKnobControl(gateThresholdArea, kNoiseGateThreshold, "GATE THRESHOLD", style, knobBackgroundBitmap));
+      pGraphics->AttachControl(
+        new NAMKnobControl(globalOutputArea, kOutputLevel, "GLOBAL OUTPUT", style, knobBackgroundBitmap));
+      pGraphics->AttachControl(
+        new NAMSwitchControl(gateToggleArea, kNoiseGateActive, "Noise Gate", style, switchHandleBitmap));
+    };
+
     auto attachChannelPanel = [&](const IRECT& panelBounds, const char* channelTitle, const dualnam::ModelSlot modelSlot,
                                   const int modelInputParam, const int modelOutputParam, const int modelBrowserTag,
                                   const int clearModelMessage, const char* defaultModelString, const int inputMeterTag,
@@ -228,14 +252,12 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
                                .GetReducedFromLeft(20.0f)
                                .GetReducedFromRight(20.0f)
                                .GetVShifted(titleHeight + 25.0f);
-      const auto inputKnobArea = knobsArea.GetGridCell(0, kInputLevel, 1, numKnobs).GetPadded(2.0f);
-      const auto noiseGateArea = knobsArea.GetGridCell(0, kNoiseGateThreshold, 1, numKnobs).GetPadded(2.0f);
-      const auto bassKnobArea = knobsArea.GetGridCell(0, kToneBass, 1, numKnobs).GetPadded(2.0f);
-      const auto midKnobArea = knobsArea.GetGridCell(0, kToneMid, 1, numKnobs).GetPadded(2.0f);
-      const auto trebleKnobArea = knobsArea.GetGridCell(0, kToneTreble, 1, numKnobs).GetPadded(2.0f);
-      const auto outputKnobArea = knobsArea.GetGridCell(0, kOutputLevel, 1, numKnobs).GetPadded(2.0f);
-      const auto ngToggleArea =
-        noiseGateArea.GetVShifted(noiseGateArea.H()).SubRectVertical(2, 0).GetReducedFromTop(10.0f);
+      constexpr int channelKnobCount = 5;
+      const auto inputKnobArea = knobsArea.GetGridCell(0, 0, 1, channelKnobCount).GetPadded(2.0f);
+      const auto bassKnobArea = knobsArea.GetGridCell(0, 1, 1, channelKnobCount).GetPadded(2.0f);
+      const auto midKnobArea = knobsArea.GetGridCell(0, 2, 1, channelKnobCount).GetPadded(2.0f);
+      const auto trebleKnobArea = knobsArea.GetGridCell(0, 3, 1, channelKnobCount).GetPadded(2.0f);
+      const auto outputKnobArea = knobsArea.GetGridCell(0, 4, 1, channelKnobCount).GetPadded(2.0f);
       const auto eqToggleArea = midKnobArea.GetVShifted(midKnobArea.H()).SubRectVertical(2, 0).GetReducedFromTop(10.0f);
 
       const auto fileWidth = 200.0f;
@@ -278,20 +300,14 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
                                   "Get IRs", getUrl);
       pGraphics->AttachControl(irBrowser, sharedControlsActive ? kCtrlTagIRFileBrowser : -1);
 
-      auto* noiseGateSwitch =
-        new NAMSwitchControl(ngToggleArea, kNoiseGateActive, "Noise Gate", style, switchHandleBitmap);
       auto* eqSwitch = new NAMSwitchControl(eqToggleArea, eqActiveParam, "EQ", style, switchHandleBitmap);
-      pGraphics->AttachControl(noiseGateSwitch);
       pGraphics->AttachControl(eqSwitch);
 
       pGraphics->AttachControl(new NAMKnobControl(inputKnobArea, modelInputParam, "", style, knobBackgroundBitmap));
-      auto* noiseGateKnob =
-        new NAMKnobControl(noiseGateArea, kNoiseGateThreshold, "", style, knobBackgroundBitmap);
       auto* bassKnob = new NAMKnobControl(bassKnobArea, bassParam, "", style, knobBackgroundBitmap);
       auto* midKnob = new NAMKnobControl(midKnobArea, midParam, "", style, knobBackgroundBitmap);
       auto* trebleKnob = new NAMKnobControl(trebleKnobArea, trebleParam, "", style, knobBackgroundBitmap);
       auto* outputKnob = new NAMKnobControl(outputKnobArea, modelOutputParam, "", style, knobBackgroundBitmap);
-      pGraphics->AttachControl(noiseGateKnob);
       pGraphics->AttachControl(bassKnob, -1, eqGroup);
       pGraphics->AttachControl(midKnob, -1, eqGroup);
       pGraphics->AttachControl(trebleKnob, -1, eqGroup);
@@ -306,17 +322,19 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
       {
         irSwitch->SetDisabled(true);
         irBrowser->SetDisabled(true);
-        noiseGateSwitch->SetDisabled(true);
-        noiseGateKnob->SetDisabled(true);
       }
     };
 
-    const auto channelPanelWidth = b.W() / 2.0f;
-    attachChannelPanel(b.GetFromLeft(channelPanelWidth), "CHANNEL A", dualnam::ModelSlot::A, kModelAInputLevel,
+    const auto globalStripHeight = 120.0f;
+    const auto globalStrip = b.GetFromTop(globalStripHeight);
+    const auto channelPanels = b.GetReducedFromTop(globalStripHeight);
+    const auto channelPanelWidth = channelPanels.W() / 2.0f;
+    attachGlobalStrip(globalStrip);
+    attachChannelPanel(channelPanels.GetFromLeft(channelPanelWidth), "CHANNEL A", dualnam::ModelSlot::A, kModelAInputLevel,
                        kModelAOutputLevel, kCtrlTagModelAFileBrowser, kMsgTagClearModelA,
                        defaultNamAFileString.c_str(), kCtrlTagInputMeterA, kCtrlTagOutputMeterA, kModelAEQActive,
                        kModelABass, kModelAMid, kModelATreble, "EQ_A_KNOBS", true);
-    attachChannelPanel(b.GetFromRight(channelPanelWidth), "CHANNEL B", dualnam::ModelSlot::B, kModelBInputLevel,
+    attachChannelPanel(channelPanels.GetFromRight(channelPanelWidth), "CHANNEL B", dualnam::ModelSlot::B, kModelBInputLevel,
                        kModelBOutputLevel, kCtrlTagModelBFileBrowser, kMsgTagClearModelB,
                        defaultNamBFileString.c_str(), kCtrlTagInputMeterB, kCtrlTagOutputMeterB, kModelBEQActive,
                        kModelBBass, kModelBMid, kModelBTreble, "EQ_B_KNOBS", false);
