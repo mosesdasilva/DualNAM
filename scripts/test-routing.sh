@@ -34,3 +34,4 @@ xcrun clang++ \
 "$test_dir/routing-tests"
 "$test_dir/model-slot-tests"
 "$test_dir/state-tests"
+"$repo_root/scripts/test-ui-layout.sh"

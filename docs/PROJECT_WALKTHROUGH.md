@@ -16,6 +16,16 @@ host left input  -> shared input gain -> NAM model A -> shared processing -> lef
 host right input -> shared input gain -> NAM model B -> shared processing -> right output
 ```
 
+The current implementation also has an independent input trim immediately
+before each model:
+
+```text
+left  -> shared input -> Input A -> NAM A
+right -> shared input -> Input B -> NAM B
+```
+
+`Input A` and `Input B` each range from -20 dB to +20 dB and default to 0 dB.
+
 The two NAM captures are independent:
 
 - slot A loads one `.nam` file;
@@ -399,12 +409,13 @@ host inputs
   -> shared input gain
   -> apply pending model changes
   -> noise-gate trigger
+  -> independent Input A / Input B gain
   -> NAM A and NAM B
   -> noise-gate gain
   -> shared tone stack / EQ
   -> inherited IR stage, when active
   -> DC-blocking high-pass filter
-  -> shared output gain
+  -> independent Output A / Output B gain
   -> host outputs
   -> meters
 ```
@@ -418,6 +429,20 @@ dualnam::ProcessStereoModels(
   nFrames,
   models);
 ```
+
+The branch gains are applied into preallocated model-input buffers:
+
+```cpp
+dualnam::ApplyStereoInputGains(
+  triggerOutput,
+  modelInputPointers,
+  nFrames,
+  mModelInputGains);
+```
+
+This placement means the shared Input control and gate detector still see the
+common input stage, while `Input A` and `Input B` independently determine how
+hard each capture is driven.
 
 ### Input copy and shared gain
 
@@ -584,29 +609,31 @@ This tells the host the plug-in's worst-case latency. It does not yet delay the
 faster internal branch to align it with the slower branch. Internal branch
 alignment remains a future production-hardening task.
 
-## 8. The two model browsers
+## 8. The mirrored two-channel editor
 
-The UI now creates two browser controls:
+The editor width was doubled from 600 to 1200 pixels while retaining the
+original 400-pixel height. A single `attachChannelPanel` lambda receives one
+600-pixel panel rectangle and creates the same geometry for either channel:
 
 ```cpp
-new NAMFileBrowserControl(
-  modelAreaA,
-  kMsgTagClearModelA,
-  "Select model A...",
-  "nam",
-  makeLoadModelCompletionHandler(dualnam::ModelSlot::A),
-  ...);
+attachChannelPanel(leftPanel, "CHANNEL A", ModelSlot::A, kModelAInputLevel, ...);
+attachChannelPanel(rightPanel, "CHANNEL B", ModelSlot::B, kModelBInputLevel, ...);
 ```
 
-and:
+Using one layout function is important: changing a control position once keeps
+both panels aligned. The first knob in each panel replaces the original shared
+Input knob and is connected to that branch's functional `Input A` or `Input B`
+parameter. The last knob is similarly connected to `Output A` or `Output B`.
+
+The two model browsers are also functional and independently tagged:
 
 ```cpp
 new NAMFileBrowserControl(
-  modelAreaB,
-  kMsgTagClearModelB,
-  "Select model B...",
+  modelArea,
+  clearModelMessage,
+  defaultModelString,
   "nam",
-  makeLoadModelCompletionHandler(dualnam::ModelSlot::B),
+  makeLoadModelCompletionHandler(modelSlot),
   ...);
 ```
 
@@ -620,6 +647,57 @@ Both use the same generic loader logic. The slot argument determines:
 This is an example of avoiding duplication without building a large
 abstraction.
 
+The inherited noise gate, EQ, IR, meters, and slimming controls are not
+yet independent DSP paths. Channel A keeps the existing shared controls
+functional so no established capability is lost. Matching Channel B controls
+are visible but disabled. This makes their intended locations explicit without
+misrepresenting them as implemented. The Channel B IR browser follows the same
+rule: it is a visual placeholder until a second IR object and state path exist.
+
+### Independent output gains
+
+The final handoff to the host applies one linear gain per channel:
+
+```cpp
+dualnam::ApplyStereoOutputGains(
+  processedChannels,
+  hostOutputs,
+  numFrames,
+  mModelOutputGains,
+  connectedOutputChannels);
+```
+
+`Output A` affects only the left output and `Output B` affects only the right
+output. Both range from -40 dB to +40 dB and default to unity at 0 dB.
+
+The original parameter ID 5 named `Output` remains allocated because removing
+it would shift or invalidate existing host automation. It is no longer read by
+the active DSP and no longer has a knob in the main editor. When schema 1 or 2
+state is loaded, its saved value initializes both new output gains so an older
+session begins with the same overall level:
+
+```cpp
+Output A = legacy Output;
+Output B = legacy Output;
+```
+
+### Independent meters
+
+Each channel panel has two live mono meters. They do not share stereo meter
+data or channel offsets:
+
+```cpp
+mInputSenderA.ProcessBlock(inputA, frames, kCtrlTagInputMeterA);
+mInputSenderB.ProcessBlock(inputB, frames, kCtrlTagInputMeterB);
+mOutputSenderA.ProcessBlock(outputA, frames, kCtrlTagOutputMeterA);
+mOutputSenderB.ProcessBlock(outputB, frames, kCtrlTagOutputMeterB);
+```
+
+The input meters receive the branch buffers after the independent Input A/B
+gain stage. The output meters receive the host output buffers after independent
+Output A/B gain. Therefore changing one branch gain produces visual feedback
+only on that branch's corresponding meter.
+
 ## 9. Saving and restoring host state
 
 A plug-in session normally saves parameters and references to external files.
@@ -632,11 +710,14 @@ their paths and reloads them.
 inline constexpr char kHeader[] = "###DualNAM###";
 inline constexpr char kLegacyNAMHeader[] =
   "###NeuralAmpModeler###";
-inline constexpr char kSchemaVersion[] = "1";
+inline constexpr char kSchemaVersion[] = "2";
 ```
 
 The header answers “what kind of state is this?” The schema version answers
 “which layout does this state use?”
+
+Schema 2 adds `Input A` and `Input B`. Schema 1 and older upstream state remain
+readable; missing branch trims are restored to their 0 dB defaults.
 
 ### Serialization
 
@@ -970,6 +1051,12 @@ queue.
 - saved and restored A/B paths;
 - legacy single-model state mapped to A;
 - shared input and output gain;
+- independent pre-model Input A and Input B gain parameters;
+- independent post-processing Output A and Output B gain parameters;
+- independent input and output meters for Channel A and Channel B;
+- mirrored 1200x400 Channel A/Channel B editor;
+- functional model browser and branch input control on both panels;
+- disabled Channel B placeholders for future independent processing;
 - inherited EQ and noise gate;
 - inherited IR functionality;
 - unique DualNAM host identity;
@@ -979,7 +1066,7 @@ queue.
 
 ### Not yet implemented
 
-- independent gain controls for model A and model B;
+- independent A/B EQ;
 - selectable stereo/mono-duplicated input mode;
 - internal delay compensation when A/B branch latencies differ;
 - off-audio-thread retired-model destruction;

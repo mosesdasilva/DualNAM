@@ -140,9 +140,26 @@ Progress:
 
 - Completed: separate model A/B browsers, independent load/clear handling,
   persisted A/B paths, a versioned DualNAM state header, and legacy upstream
-  NAM state migration into slot A.
-- Remaining: independent A/B gain parameters and manual host save/reopen
-  verification.
+  NAM state migration into slot A. Independent pre-model A/B input gains were
+  appended as parameter IDs 13 and 14 with a -20 dB to +20 dB range and 0 dB
+  defaults; schema version 2 persists them while schema version 1 restores them
+  at their defaults. Independent output gains were appended as parameter IDs
+  15 and 16 with a -40 dB to +40 dB range and 0 dB defaults. Schema version 3
+  persists them; older shared Output values migrate into both branches. The
+  legacy Output parameter remains reserved for host compatibility but is no
+  longer part of active DSP or the main editor. The editor is now 1200x400 and
+  consists of two identical 600x400 channel panels. Model loading, branch input
+  gain, branch output gain, and mono input/output meters are functional on both
+  panels. Each input meter reads its branch after Input A/B; each output meter
+  reads its final host channel after Output A/B. Channel A retains access to
+  the inherited shared processing, while the corresponding Channel B controls
+  and second IR selector are disabled placeholders for future independent
+  implementations.
+- Remaining: another manual host save/reopen verification for the new controls.
+  Replace placeholders one behavior at a time as independent gate, EQ, and IR
+  paths are implemented. Add the planned global input/output controls
+  above the channel strip only after their behavior and required editor height
+  are designed.
 
 ### 4. Rename and package as DualNAM
 

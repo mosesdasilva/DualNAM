@@ -22,6 +22,18 @@
 
 void NeuralAmpModeler::_UnserializeApplyConfig(nlohmann::json& config)
 {
+  // State written before schema 2 has no branch input trims. Restore those
+  // states deterministically at the new parameters' 0 dB defaults.
+  if (config.find("Input A") == config.end())
+    config["Input A"] = 0.0;
+  if (config.find("Input B") == config.end())
+    config["Input B"] = 0.0;
+  const auto legacyOutputs = dualnam::state::OutputGains::FromLegacy(config.value("Output", 0.0));
+  if (config.find("Output A") == config.end())
+    config["Output A"] = legacyOutputs.outputA;
+  if (config.find("Output B") == config.end())
+    config["Output B"] = legacyOutputs.outputB;
+
   auto getParamByName = [&](std::string& name) {
     // Could use a map but eh
     for (int i = 0; i < kNumParams; i++)
@@ -309,7 +321,8 @@ int NeuralAmpModeler::_UnserializeDualNAMState(const iplug::IByteChunk& chunk, i
   int pos = startPos;
   WDL_String schemaVersion;
   pos = chunk.GetStr(schemaVersion, pos);
-  if (strcmp(schemaVersion.Get(), dualnam::state::kSchemaVersion) != 0)
+  const std::string schema(schemaVersion.Get());
+  if (schema != "1" && schema != "2" && schema != dualnam::state::kSchemaVersion)
     return -1;
 
   nlohmann::json config;
@@ -334,6 +347,16 @@ int NeuralAmpModeler::_UnserializeDualNAMState(const iplug::IByteChunk& chunk, i
                                       "InputCalibrationLevel",
                                       "OutputMode",
                                       "Slim"};
+  if (schema == "2" || schema == dualnam::state::kSchemaVersion)
+  {
+    paramNames.push_back("Input A");
+    paramNames.push_back("Input B");
+  }
+  if (schema == dualnam::state::kSchemaVersion)
+  {
+    paramNames.push_back("Output A");
+    paramNames.push_back("Output B");
+  }
   for (const auto& paramName : paramNames)
   {
     double value = 0.0;

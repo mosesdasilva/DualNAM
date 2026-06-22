@@ -18,6 +18,8 @@ void Require(const bool condition, const char* message)
 void TestDualNAMUsesItsOwnStateHeader()
 {
   Require(std::string(dualnam::state::kHeader) == "###DualNAM###", "DualNAM state header must be stable");
+  Require(std::string(dualnam::state::kSchemaVersion) == "3",
+          "schema version 3 must include independent A/B output gains");
   Require(std::string(dualnam::state::kHeader) != dualnam::state::kLegacyNAMHeader,
           "DualNAM state must not be written with the upstream NAM header");
 }
@@ -37,6 +39,14 @@ void TestDualPathsRemainIndependent()
   Require(paths.modelA == "/Models/a.nam", "slot A path must remain independent");
   Require(paths.modelB == "/Models/b.nam", "slot B path must remain independent");
 }
+
+void TestLegacySharedOutputMigratesToBothBranches()
+{
+  const auto gains = dualnam::state::OutputGains::FromLegacy(-6.0);
+
+  Require(gains.outputA == -6.0, "legacy shared output must migrate to output A");
+  Require(gains.outputB == -6.0, "legacy shared output must migrate to output B");
+}
 } // namespace
 
 int main()
@@ -44,6 +54,7 @@ int main()
   TestDualNAMUsesItsOwnStateHeader();
   TestLegacyStateMapsOnlyToSlotA();
   TestDualPathsRemainIndependent();
+  TestLegacySharedOutputMigratesToBothBranches();
   std::cout << "DualNAM state tests passed\n";
   return EXIT_SUCCESS;
 }

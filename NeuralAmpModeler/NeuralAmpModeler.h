@@ -39,6 +39,8 @@ enum EParams
   kToneBass,
   kToneMid,
   kToneTreble,
+  // Reserved for compatibility with sessions created before independent
+  // outputs. It is no longer used by the active DSP or main editor.
   kOutputLevel,
   // The rest is fine though.
   kNoiseGateActive,
@@ -49,6 +51,11 @@ enum EParams
   kInputCalibrationLevel,
   kOutputMode,
   kSlim,
+  // Appended to preserve all existing host automation parameter indices.
+  kModelAInputLevel,
+  kModelBInputLevel,
+  kModelAOutputLevel,
+  kModelBOutputLevel,
   kNumParams
 };
 
@@ -59,8 +66,8 @@ enum ECtrlTags
   kCtrlTagModelAFileBrowser = 0,
   kCtrlTagModelBFileBrowser,
   kCtrlTagIRFileBrowser,
-  kCtrlTagInputMeter,
-  kCtrlTagOutputMeter,
+  kCtrlTagInputMeterA,
+  kCtrlTagOutputMeterA,
   kCtrlTagSettingsBox,
   kCtrlTagOutputMode,
   kCtrlTagCalibrateInput,
@@ -68,6 +75,8 @@ enum ECtrlTags
   kCtrlTagSlimmableIcon,
   kCtrlTagSlimOverlayBackdrop,
   kCtrlTagSlimKnob,
+  kCtrlTagInputMeterB,
+  kCtrlTagOutputMeterB,
   kNumCtrlTags
 };
 
@@ -259,7 +268,8 @@ private:
   void _ResetModelAndIR(const double sampleRate, const int maxBlockSize);
 
   void _SetInputGain();
-  void _SetOutputGain();
+  void _SetModelInputGains();
+  void _SetModelOutputGains();
   void _ApplySlimParamToLoadedNAMs();
 
   // See: Unserialization.cpp
@@ -279,22 +289,24 @@ private:
   // Update level meters
   // Called within ProcessBlock().
   // Assume _ProcessInput() and _ProcessOutput() were run immediately before.
-  void _UpdateMeters(iplug::sample** inputPointer, iplug::sample** outputPointer, const size_t nFrames,
-                     const size_t nChansIn, const size_t nChansOut);
+  void _UpdateMeters(iplug::sample** inputPointer, iplug::sample** outputPointer, const size_t nFrames);
 
   // Member data
 
   // Input arrays to NAM
   std::vector<std::vector<iplug::sample>> mInputArray;
+  // Per-model input arrays after independent A/B input gain.
+  std::vector<std::vector<iplug::sample>> mModelInputArray;
   // Output from NAM
   std::vector<std::vector<iplug::sample>> mOutputArray;
   // Pointer versions
   iplug::sample** mInputPointers = nullptr;
   iplug::sample** mOutputPointers = nullptr;
 
-  // Input and output gain
+  // Input and per-model gain
   double mInputGain = 1.0;
-  double mOutputGain = 1.0;
+  double mModelInputGains[dualnam::kStereoChannels]{1.0, 1.0};
+  double mModelOutputGains[dualnam::kStereoChannels]{1.0, 1.0};
 
   // Noise gates
   dsp::noise_gate::Trigger mNoiseGateTrigger;
@@ -326,5 +338,6 @@ private:
 
   std::unordered_map<std::string, double> mNAMParams = {{"Input", 0.0}, {"Output", 0.0}};
 
-  NAMSender mInputSender, mOutputSender;
+  NAMSender mInputSenderA, mInputSenderB;
+  NAMSender mOutputSenderA, mOutputSenderB;
 };

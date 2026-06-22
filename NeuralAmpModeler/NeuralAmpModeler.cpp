@@ -94,6 +94,10 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
   GetParam(kInputCalibrationLevel)
     ->InitDouble(kInputCalibrationLevelParamName.c_str(), kDefaultInputCalibrationLevel, -60.0, 60.0, 0.1, "dBu");
   GetParam(kSlim)->InitDouble("Slim", 0.0, 0.0, 1.0, 0.01);
+  GetParam(kModelAInputLevel)->InitGain("Input A", 0.0, -20.0, 20.0, 0.1);
+  GetParam(kModelBInputLevel)->InitGain("Input B", 0.0, -20.0, 20.0, 0.1);
+  GetParam(kModelAOutputLevel)->InitGain("Output A", 0.0, -40.0, 40.0, 0.1);
+  GetParam(kModelBOutputLevel)->InitGain("Output B", 0.0, -40.0, 40.0, 0.1);
 
   mNoiseGateTrigger.AddListener(&mNoiseGateGain);
 
@@ -138,48 +142,6 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     const auto meterBackgroundBitmap = pGraphics->LoadBitmap(METERBACKGROUND_FN);
 
     const auto b = pGraphics->GetBounds();
-    const auto mainArea = b.GetPadded(-20);
-    const auto contentArea = mainArea.GetPadded(-10);
-    const auto titleHeight = 50.0f;
-    const auto titleArea = contentArea.GetFromTop(titleHeight);
-
-    // Areas for knobs
-    const auto knobsPad = 20.0f;
-    const auto knobsExtraSpaceBelowTitle = 25.0f;
-    const auto singleKnobPad = -2.0f;
-    const auto knobsArea = contentArea.GetFromTop(NAM_KNOB_HEIGHT)
-                             .GetReducedFromLeft(knobsPad)
-                             .GetReducedFromRight(knobsPad)
-                             .GetVShifted(titleHeight + knobsExtraSpaceBelowTitle);
-    const auto inputKnobArea = knobsArea.GetGridCell(0, kInputLevel, 1, numKnobs).GetPadded(-singleKnobPad);
-    const auto noiseGateArea = knobsArea.GetGridCell(0, kNoiseGateThreshold, 1, numKnobs).GetPadded(-singleKnobPad);
-    const auto bassKnobArea = knobsArea.GetGridCell(0, kToneBass, 1, numKnobs).GetPadded(-singleKnobPad);
-    const auto midKnobArea = knobsArea.GetGridCell(0, kToneMid, 1, numKnobs).GetPadded(-singleKnobPad);
-    const auto trebleKnobArea = knobsArea.GetGridCell(0, kToneTreble, 1, numKnobs).GetPadded(-singleKnobPad);
-    const auto outputKnobArea = knobsArea.GetGridCell(0, kOutputLevel, 1, numKnobs).GetPadded(-singleKnobPad);
-
-    const auto ngToggleArea =
-      noiseGateArea.GetVShifted(noiseGateArea.H()).SubRectVertical(2, 0).GetReducedFromTop(10.0f);
-    const auto eqToggleArea = midKnobArea.GetVShifted(midKnobArea.H()).SubRectVertical(2, 0).GetReducedFromTop(10.0f);
-
-    // Areas for model and IR
-    const auto fileWidth = 200.0f;
-    const auto fileHeight = 30.0f;
-    const auto irYOffset = 38.0f;
-    const auto modelRow = contentArea.GetFromBottom((2.0f * fileHeight)).GetFromTop(fileHeight).GetVShifted(-1);
-    const auto modelAreaA = modelRow.GetFromLeft(fileWidth).GetHShifted(35.0f);
-    const auto modelAreaB = modelRow.GetFromRight(fileWidth).GetHShifted(-35.0f);
-    const auto slimIconArea =
-      IRECT(modelAreaA.R + 6.f, modelAreaA.MH() - 14.f, modelAreaA.R + 6.f + 2.f * 28.f, modelAreaA.MH() + 14.f);
-    const auto modelIconArea = modelAreaA.GetFromLeft(30).GetTranslated(-40, 10);
-    const auto irArea = modelRow.GetMidHPadded(fileWidth).GetVShifted(irYOffset);
-    const auto irSwitchArea = irArea.GetFromLeft(30.0f).GetHShifted(-40.0f).GetScaledAboutCentre(0.6f);
-
-    // Areas for meters
-    const auto inputMeterArea = contentArea.GetFromLeft(30).GetHShifted(-20).GetMidVPadded(100).GetVShifted(-25);
-    const auto outputMeterArea = contentArea.GetFromRight(30).GetHShifted(20).GetMidVPadded(100).GetVShifted(-25);
-
-    // Misc Areas
     const auto settingsButtonArea = CornerButtonArea(b);
 
     // Model loader button
@@ -215,11 +177,6 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
       }
     };
 
-    pGraphics->AttachBackground(BACKGROUND_FN);
-    pGraphics->AttachControl(new IBitmapControl(b, linesBitmap));
-    pGraphics->AttachControl(new IVLabelControl(titleArea, "DUAL NAM", titleStyle));
-    pGraphics->AttachControl(new ISVGControl(modelIconArea, modelIconSVG));
-
 #ifdef NAM_PICK_DIRECTORY
     const std::string defaultNamAFileString = "Select model A directory...";
     const std::string defaultNamBFileString = "Select model B directory...";
@@ -231,17 +188,6 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
 #endif
     // Getting started page listing additional resources
     const char* const getUrl = "https://www.neuralampmodeler.com/users#comp-marb84o5";
-    pGraphics->AttachControl(
-      new NAMFileBrowserControl(modelAreaA, kMsgTagClearModelA, defaultNamAFileString.c_str(), "nam",
-                                makeLoadModelCompletionHandler(dualnam::ModelSlot::A), style, fileSVG, crossSVG,
-                                leftArrowSVG, rightArrowSVG,
-                                fileBackgroundBitmap, globeSVG, "Get NAM Models", getUrl),
-      kCtrlTagModelAFileBrowser);
-    pGraphics->AttachControl(
-      new NAMFileBrowserControl(modelAreaB, kMsgTagClearModelB, defaultNamBFileString.c_str(), "nam",
-                                makeLoadModelCompletionHandler(dualnam::ModelSlot::B), style, fileSVG, crossSVG,
-                                leftArrowSVG, rightArrowSVG, fileBackgroundBitmap, globeSVG, "Get NAM Models", getUrl),
-      kCtrlTagModelBFileBrowser);
 
     auto hideSlimOverlay = [](IControl* pCaller) {
       IGraphics* ui = pCaller->GetUI();
@@ -260,36 +206,112 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
       ui->SetAllControlsDirty();
     };
 
-    pGraphics
-      ->AttachControl(
-        new NAMSquareButtonControl(slimIconArea, DefaultClickActionFunc, slimIconSVG), kCtrlTagSlimmableIcon)
-      ->SetAnimationEndActionFunction(showSlimOverlay)
-      ->Hide(true);
+    auto attachChannelPanel = [&](const IRECT& panelBounds, const char* channelTitle, const dualnam::ModelSlot modelSlot,
+                                  const int modelInputParam, const int modelOutputParam, const int modelBrowserTag,
+                                  const int clearModelMessage, const char* defaultModelString, const int inputMeterTag,
+                                  const int outputMeterTag, const bool sharedControlsActive) {
+      const auto mainArea = panelBounds.GetPadded(-20);
+      const auto contentArea = mainArea.GetPadded(-10);
+      const auto titleHeight = 50.0f;
+      const auto titleArea = contentArea.GetFromTop(titleHeight);
+      const auto knobsArea = contentArea.GetFromTop(NAM_KNOB_HEIGHT)
+                               .GetReducedFromLeft(20.0f)
+                               .GetReducedFromRight(20.0f)
+                               .GetVShifted(titleHeight + 25.0f);
+      const auto inputKnobArea = knobsArea.GetGridCell(0, kInputLevel, 1, numKnobs).GetPadded(2.0f);
+      const auto noiseGateArea = knobsArea.GetGridCell(0, kNoiseGateThreshold, 1, numKnobs).GetPadded(2.0f);
+      const auto bassKnobArea = knobsArea.GetGridCell(0, kToneBass, 1, numKnobs).GetPadded(2.0f);
+      const auto midKnobArea = knobsArea.GetGridCell(0, kToneMid, 1, numKnobs).GetPadded(2.0f);
+      const auto trebleKnobArea = knobsArea.GetGridCell(0, kToneTreble, 1, numKnobs).GetPadded(2.0f);
+      const auto outputKnobArea = knobsArea.GetGridCell(0, kOutputLevel, 1, numKnobs).GetPadded(2.0f);
+      const auto ngToggleArea =
+        noiseGateArea.GetVShifted(noiseGateArea.H()).SubRectVertical(2, 0).GetReducedFromTop(10.0f);
+      const auto eqToggleArea = midKnobArea.GetVShifted(midKnobArea.H()).SubRectVertical(2, 0).GetReducedFromTop(10.0f);
 
-    pGraphics->AttachControl(new ISVGSwitchControl(irSwitchArea, {irIconOffSVG, irIconOnSVG}, kIRToggle));
-    pGraphics->AttachControl(
-      new NAMFileBrowserControl(irArea, kMsgTagClearIR, defaultIRString.c_str(), "wav", loadIRCompletionHandler, style,
-                                fileSVG, crossSVG, leftArrowSVG, rightArrowSVG, fileBackgroundBitmap, globeSVG,
-                                "Get IRs", getUrl),
-      kCtrlTagIRFileBrowser);
-    pGraphics->AttachControl(
-      new NAMSwitchControl(ngToggleArea, kNoiseGateActive, "Noise Gate", style, switchHandleBitmap));
-    pGraphics->AttachControl(new NAMSwitchControl(eqToggleArea, kEQActive, "EQ", style, switchHandleBitmap));
+      const auto fileWidth = 200.0f;
+      const auto fileHeight = 30.0f;
+      const auto modelRow = contentArea.GetFromBottom(2.0f * fileHeight).GetFromTop(fileHeight).GetVShifted(-1.0f);
+      const auto modelArea = modelRow.GetFromLeft(fileWidth).GetHShifted(35.0f);
+      const auto modelIconArea = modelArea.GetFromLeft(30.0f).GetTranslated(-40.0f, 10.0f);
+      const auto slimIconArea =
+        IRECT(modelArea.R + 6.0f, modelArea.MH() - 14.0f, modelArea.R + 62.0f, modelArea.MH() + 14.0f);
+      const auto irArea = modelRow.GetMidHPadded(fileWidth).GetVShifted(38.0f);
+      const auto irSwitchArea = irArea.GetFromLeft(30.0f).GetHShifted(-40.0f).GetScaledAboutCentre(0.6f);
+      const auto inputMeterArea =
+        contentArea.GetFromLeft(30.0f).GetHShifted(-20.0f).GetMidVPadded(100.0f).GetVShifted(-25.0f);
+      const auto outputMeterArea =
+        contentArea.GetFromRight(30.0f).GetHShifted(20.0f).GetMidVPadded(100.0f).GetVShifted(-25.0f);
 
-    // The knobs
-    pGraphics->AttachControl(new NAMKnobControl(inputKnobArea, kInputLevel, "", style, knobBackgroundBitmap));
-    pGraphics->AttachControl(new NAMKnobControl(noiseGateArea, kNoiseGateThreshold, "", style, knobBackgroundBitmap));
-    pGraphics->AttachControl(
-      new NAMKnobControl(bassKnobArea, kToneBass, "", style, knobBackgroundBitmap), -1, "EQ_KNOBS");
-    pGraphics->AttachControl(
-      new NAMKnobControl(midKnobArea, kToneMid, "", style, knobBackgroundBitmap), -1, "EQ_KNOBS");
-    pGraphics->AttachControl(
-      new NAMKnobControl(trebleKnobArea, kToneTreble, "", style, knobBackgroundBitmap), -1, "EQ_KNOBS");
-    pGraphics->AttachControl(new NAMKnobControl(outputKnobArea, kOutputLevel, "", style, knobBackgroundBitmap));
+      pGraphics->AttachControl(new IBitmapControl(panelBounds, backgroundBitmap));
+      pGraphics->AttachControl(new IBitmapControl(panelBounds, linesBitmap));
+      pGraphics->AttachControl(new IVLabelControl(titleArea, channelTitle, titleStyle));
+      pGraphics->AttachControl(new ISVGControl(modelIconArea, modelIconSVG));
 
-    // The meters
-    pGraphics->AttachControl(new NAMMeterControl(inputMeterArea, meterBackgroundBitmap, style), kCtrlTagInputMeter);
-    pGraphics->AttachControl(new NAMMeterControl(outputMeterArea, meterBackgroundBitmap, style), kCtrlTagOutputMeter);
+      pGraphics->AttachControl(
+        new NAMFileBrowserControl(modelArea, clearModelMessage, defaultModelString, "nam",
+                                  makeLoadModelCompletionHandler(modelSlot), style, fileSVG, crossSVG, leftArrowSVG,
+                                  rightArrowSVG, fileBackgroundBitmap, globeSVG, "Get NAM Models", getUrl),
+        modelBrowserTag);
+
+      auto* slimControl = new NAMSquareButtonControl(slimIconArea, DefaultClickActionFunc, slimIconSVG);
+      pGraphics->AttachControl(slimControl, sharedControlsActive ? kCtrlTagSlimmableIcon : -1);
+      if (sharedControlsActive)
+        slimControl->SetAnimationEndActionFunction(showSlimOverlay)->Hide(true);
+      else
+        slimControl->SetDisabled(true);
+
+      auto* irSwitch = new ISVGSwitchControl(irSwitchArea, {irIconOffSVG, irIconOnSVG}, kIRToggle);
+      pGraphics->AttachControl(irSwitch);
+      auto* irBrowser =
+        new NAMFileBrowserControl(irArea, kMsgTagClearIR, defaultIRString.c_str(), "wav", loadIRCompletionHandler, style,
+                                  fileSVG, crossSVG, leftArrowSVG, rightArrowSVG, fileBackgroundBitmap, globeSVG,
+                                  "Get IRs", getUrl);
+      pGraphics->AttachControl(irBrowser, sharedControlsActive ? kCtrlTagIRFileBrowser : -1);
+
+      auto* noiseGateSwitch =
+        new NAMSwitchControl(ngToggleArea, kNoiseGateActive, "Noise Gate", style, switchHandleBitmap);
+      auto* eqSwitch = new NAMSwitchControl(eqToggleArea, kEQActive, "EQ", style, switchHandleBitmap);
+      pGraphics->AttachControl(noiseGateSwitch);
+      pGraphics->AttachControl(eqSwitch);
+
+      pGraphics->AttachControl(new NAMKnobControl(inputKnobArea, modelInputParam, "", style, knobBackgroundBitmap));
+      auto* noiseGateKnob =
+        new NAMKnobControl(noiseGateArea, kNoiseGateThreshold, "", style, knobBackgroundBitmap);
+      auto* bassKnob = new NAMKnobControl(bassKnobArea, kToneBass, "", style, knobBackgroundBitmap);
+      auto* midKnob = new NAMKnobControl(midKnobArea, kToneMid, "", style, knobBackgroundBitmap);
+      auto* trebleKnob = new NAMKnobControl(trebleKnobArea, kToneTreble, "", style, knobBackgroundBitmap);
+      auto* outputKnob = new NAMKnobControl(outputKnobArea, modelOutputParam, "", style, knobBackgroundBitmap);
+      pGraphics->AttachControl(noiseGateKnob);
+      pGraphics->AttachControl(bassKnob, -1, sharedControlsActive ? "EQ_KNOBS" : "CHANNEL_B_PLACEHOLDERS");
+      pGraphics->AttachControl(midKnob, -1, sharedControlsActive ? "EQ_KNOBS" : "CHANNEL_B_PLACEHOLDERS");
+      pGraphics->AttachControl(trebleKnob, -1, sharedControlsActive ? "EQ_KNOBS" : "CHANNEL_B_PLACEHOLDERS");
+      pGraphics->AttachControl(outputKnob);
+
+      auto* inputMeter = new NAMMeterControl(inputMeterArea, meterBackgroundBitmap, style);
+      auto* outputMeter = new NAMMeterControl(outputMeterArea, meterBackgroundBitmap, style);
+      pGraphics->AttachControl(inputMeter, inputMeterTag);
+      pGraphics->AttachControl(outputMeter, outputMeterTag);
+
+      if (!sharedControlsActive)
+      {
+        irSwitch->SetDisabled(true);
+        irBrowser->SetDisabled(true);
+        noiseGateSwitch->SetDisabled(true);
+        eqSwitch->SetDisabled(true);
+        noiseGateKnob->SetDisabled(true);
+        bassKnob->SetDisabled(true);
+        midKnob->SetDisabled(true);
+        trebleKnob->SetDisabled(true);
+      }
+    };
+
+    const auto channelPanelWidth = b.W() / 2.0f;
+    attachChannelPanel(b.GetFromLeft(channelPanelWidth), "CHANNEL A", dualnam::ModelSlot::A, kModelAInputLevel,
+                       kModelAOutputLevel, kCtrlTagModelAFileBrowser, kMsgTagClearModelA,
+                       defaultNamAFileString.c_str(), kCtrlTagInputMeterA, kCtrlTagOutputMeterA, true);
+    attachChannelPanel(b.GetFromRight(channelPanelWidth), "CHANNEL B", dualnam::ModelSlot::B, kModelBInputLevel,
+                       kModelBOutputLevel, kCtrlTagModelBFileBrowser, kMsgTagClearModelB,
+                       defaultNamBFileString.c_str(), kCtrlTagInputMeterB, kCtrlTagOutputMeterB, false);
 
     // Settings/help/about box
     pGraphics->AttachControl(new NAMCircleButtonControl(
@@ -363,9 +385,14 @@ void NeuralAmpModeler::ProcessBlock(iplug::sample** inputs, iplug::sample** outp
     triggerOutput = mNoiseGateTrigger.Process(mInputPointers, numChannelsInternal, numFrames);
   }
 
+  iplug::sample* modelInputPointers[dualnam::kStereoChannels]{
+    mModelInputArray[static_cast<size_t>(dualnam::ModelSlot::A)].data(),
+    mModelInputArray[static_cast<size_t>(dualnam::ModelSlot::B)].data()};
+  dualnam::ApplyStereoInputGains(triggerOutput, modelInputPointers, nFrames, mModelInputGains);
+
   ResamplingNAM* models[dualnam::kStereoChannels]{mModelSlots.Live(dualnam::ModelSlot::A),
                                                   mModelSlots.Live(dualnam::ModelSlot::B)};
-  dualnam::ProcessStereoModels(triggerOutput, mOutputPointers, nFrames, models);
+  dualnam::ProcessStereoModels(modelInputPointers, mOutputPointers, nFrames, models);
   // Apply the noise gate after the NAM
   sample** gateGainOutput =
     noiseGateActive ? mNoiseGateGain.Process(mOutputPointers, numChannelsInternal, numFrames) : mOutputPointers;
@@ -397,7 +424,7 @@ void NeuralAmpModeler::ProcessBlock(iplug::sample** inputs, iplug::sample** outp
   // _ProcessOutput(lpfPointers, outputs, numFrames, numChannelsInternal, numChannelsExternalOut);
   // * Output of input leveling (inputs -> mInputPointers),
   // * Output of output leveling (mOutputPointers -> outputs)
-  _UpdateMeters(mInputPointers, outputs, numFrames, numChannelsInternal, numChannelsExternalOut);
+  _UpdateMeters(modelInputPointers, outputs, numFrames);
 }
 
 void NeuralAmpModeler::OnReset()
@@ -410,8 +437,10 @@ void NeuralAmpModeler::OnReset()
   // I'm ignoring the model & IR, but it's not the end of the world.
   const int tailCycles = 10;
   SetTailSize(tailCycles * (int)(sampleRate / kDCBlockerFrequency));
-  mInputSender.Reset(sampleRate);
-  mOutputSender.Reset(sampleRate);
+  mInputSenderA.Reset(sampleRate);
+  mInputSenderB.Reset(sampleRate);
+  mOutputSenderA.Reset(sampleRate);
+  mOutputSenderB.Reset(sampleRate);
   // If there is a model or IR loaded, they need to be checked for resampling.
   _ResetModelAndIR(sampleRate, GetBlockSize());
   mToneStack->Reset(sampleRate, maxBlockSize);
@@ -420,8 +449,10 @@ void NeuralAmpModeler::OnReset()
 
 void NeuralAmpModeler::OnIdle()
 {
-  mInputSender.TransmitData(*this);
-  mOutputSender.TransmitData(*this);
+  mInputSenderA.TransmitData(*this);
+  mInputSenderB.TransmitData(*this);
+  mOutputSenderA.TransmitData(*this);
+  mOutputSenderB.TransmitData(*this);
 
   if (mNewModelLoadedInDSP)
   {
@@ -522,9 +553,11 @@ void NeuralAmpModeler::OnParamChange(int paramIdx)
     case kCalibrateInput:
     case kInputCalibrationLevel:
     case kInputLevel: _SetInputGain(); break;
+    case kModelAInputLevel:
+    case kModelBInputLevel: _SetModelInputGains(); break;
     // Changes to the output gain
-    case kOutputLevel:
-    case kOutputMode: _SetOutputGain(); break;
+    case kModelAOutputLevel:
+    case kModelBOutputLevel: _SetModelOutputGains(); break;
     // Tone stack:
     case kToneBass: mToneStack->SetParam("bass", GetParam(paramIdx)->Value()); break;
     case kToneMid: mToneStack->SetParam("middle", GetParam(paramIdx)->Value()); break;
@@ -628,7 +661,7 @@ void NeuralAmpModeler::_ApplyDSPStaging()
   {
     _UpdateLatency();
     _SetInputGain();
-    _SetOutputGain();
+    _SetModelOutputGains();
   }
   if (mStagedIR != nullptr)
   {
@@ -697,35 +730,20 @@ void NeuralAmpModeler::_SetInputGain()
   mInputGain = DBToAmp(inputGainDB);
 }
 
-void NeuralAmpModeler::_SetOutputGain()
+void NeuralAmpModeler::_SetModelInputGains()
 {
-  double gainDB = GetParam(kOutputLevel)->Value();
-  if (_ModelA() != nullptr)
-  {
-    const int outputMode = GetParam(kOutputMode)->Int();
-    switch (outputMode)
-    {
-      case 1: // Normalized
-        if (_ModelA()->HasLoudness())
-        {
-          const double loudness = _ModelA()->GetLoudness();
-          const double targetLoudness = -18.0;
-          gainDB += (targetLoudness - loudness);
-        }
-        break;
-      case 2: // Calibrated
-        if (_ModelA()->HasOutputLevel())
-        {
-          const double inputLevel = GetParam(kInputCalibrationLevel)->Value();
-          const double outputLevel = _ModelA()->GetOutputLevel();
-          gainDB += (outputLevel - inputLevel);
-        }
-        break;
-      case 0: // Raw
-      default: break;
-    }
-  }
-  mOutputGain = DBToAmp(gainDB);
+  mModelInputGains[static_cast<size_t>(dualnam::ModelSlot::A)] =
+    dualnam::DecibelsToLinear(GetParam(kModelAInputLevel)->Value());
+  mModelInputGains[static_cast<size_t>(dualnam::ModelSlot::B)] =
+    dualnam::DecibelsToLinear(GetParam(kModelBInputLevel)->Value());
+}
+
+void NeuralAmpModeler::_SetModelOutputGains()
+{
+  mModelOutputGains[static_cast<size_t>(dualnam::ModelSlot::A)] =
+    dualnam::DecibelsToLinear(GetParam(kModelAOutputLevel)->Value());
+  mModelOutputGains[static_cast<size_t>(dualnam::ModelSlot::B)] =
+    dualnam::DecibelsToLinear(GetParam(kModelBOutputLevel)->Value());
 }
 
 void NeuralAmpModeler::_ApplySlimParamToLoadedNAMs()
@@ -855,6 +873,7 @@ void NeuralAmpModeler::_PrepareBuffers(const size_t numChannels, const size_t nu
   {
     _PrepareIOPointers(numChannels);
     mInputArray.resize(numChannels);
+    mModelInputArray.resize(numChannels);
     mOutputArray.resize(numChannels);
   }
   if (updateFrames)
@@ -868,6 +887,11 @@ void NeuralAmpModeler::_PrepareBuffers(const size_t numChannels, const size_t nu
     {
       mOutputArray[c].resize(numFrames);
       std::fill(mOutputArray[c].begin(), mOutputArray[c].end(), 0.0);
+    }
+    for (auto c = 0; c < mModelInputArray.size(); c++)
+    {
+      mModelInputArray[c].resize(numFrames);
+      std::fill(mModelInputArray[c].begin(), mModelInputArray[c].end(), 0.0);
     }
   }
   // Would these ever get changed by something?
@@ -905,24 +929,19 @@ void NeuralAmpModeler::_ProcessInput(iplug::sample** inputs, const size_t nFrame
 void NeuralAmpModeler::_ProcessOutput(iplug::sample** inputs, iplug::sample** outputs, const size_t nFrames,
                                       const size_t nChansIn, const size_t nChansOut)
 {
-  const double gain = mOutputGain;
   if (nChansIn != dualnam::kStereoChannels)
     throw std::runtime_error("DualNAM requires two internal output channels.");
 
-  for (size_t channel = 0; channel < nChansOut; ++channel)
-  {
-    const bool internalChannelAvailable = channel < nChansIn;
-    for (auto s = 0; s < nFrames; s++)
-    {
-      const sample value = internalChannelAvailable ? gain * inputs[channel][s] : 0.0;
+  dualnam::ApplyStereoOutputGains(inputs, outputs, static_cast<int>(nFrames), mModelOutputGains, nChansOut);
+
 #ifdef APP_API // Ensure valid output to interface
+  for (size_t channel = 0; channel < nChansOut; ++channel)
+    for (size_t s = 0; s < nFrames; ++s)
+    {
+      const sample value = outputs[channel][s];
       outputs[channel][s] = std::clamp(value, -1.0, 1.0);
-#else // In a DAW, other things may come next and should be able to handle large
-      // values.
-      outputs[channel][s] = value;
-#endif
     }
-  }
+#endif
 }
 
 void NeuralAmpModeler::_UpdateControlsFromModel()
@@ -972,13 +991,17 @@ void NeuralAmpModeler::_UpdateLatency()
   }
 }
 
-void NeuralAmpModeler::_UpdateMeters(sample** inputPointer, sample** outputPointer, const size_t nFrames,
-                                     const size_t nChansIn, const size_t nChansOut)
+void NeuralAmpModeler::_UpdateMeters(sample** inputPointer, sample** outputPointer, const size_t nFrames)
 {
-  // Right now, we didn't specify MAXNC when we initialized these, so it's 1.
-  const int nChansHack = 1;
-  mInputSender.ProcessBlock(inputPointer, (int)nFrames, kCtrlTagInputMeter, nChansHack);
-  mOutputSender.ProcessBlock(outputPointer, (int)nFrames, kCtrlTagOutputMeter, nChansHack);
+  sample* inputA[1]{dualnam::StereoChannelPointer(inputPointer, static_cast<size_t>(dualnam::ModelSlot::A))};
+  sample* inputB[1]{dualnam::StereoChannelPointer(inputPointer, static_cast<size_t>(dualnam::ModelSlot::B))};
+  sample* outputA[1]{dualnam::StereoChannelPointer(outputPointer, static_cast<size_t>(dualnam::ModelSlot::A))};
+  sample* outputB[1]{dualnam::StereoChannelPointer(outputPointer, static_cast<size_t>(dualnam::ModelSlot::B))};
+
+  mInputSenderA.ProcessBlock(inputA, static_cast<int>(nFrames), kCtrlTagInputMeterA);
+  mInputSenderB.ProcessBlock(inputB, static_cast<int>(nFrames), kCtrlTagInputMeterB);
+  mOutputSenderA.ProcessBlock(outputA, static_cast<int>(nFrames), kCtrlTagOutputMeterA);
+  mOutputSenderB.ProcessBlock(outputB, static_cast<int>(nFrames), kCtrlTagOutputMeterB);
 }
 
 // HACK
