@@ -38,6 +38,15 @@ void ApplyStereoOutputGains(Sample** inputs, Sample** outputs, const int numFram
   }
 }
 
+template <typename Sample, typename Gain>
+void ApplyGlobalStereoGain(Sample** channels, const int numFrames, const Gain gain,
+                           const std::size_t numChannels = kStereoChannels)
+{
+  for (std::size_t channel = 0; channel < numChannels; ++channel)
+    for (int frame = 0; frame < numFrames; ++frame)
+      channels[channel][frame] = static_cast<Sample>(gain * channels[channel][frame]);
+}
+
 template <typename Sample, typename Effect>
 void RouteStereoEffects(Sample** inputs, Sample** outputs, const int numFrames,
                         Effect* const (&effects)[kStereoChannels], const bool (&enabled)[kStereoChannels])

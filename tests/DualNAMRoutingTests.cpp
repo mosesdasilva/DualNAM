@@ -159,6 +159,21 @@ void TestAppliesIndependentOutputGainsAfterProcessing()
   }
 }
 
+void TestAppliesGlobalOutputGainAfterBranchOutputs()
+{
+  std::array<double, kFrames> left{1.0, 2.0, 3.0, 4.0};
+  std::array<double, kFrames> right{10.0, 20.0, 30.0, 40.0};
+  double* channels[2]{left.data(), right.data()};
+
+  dualnam::ApplyGlobalStereoGain(channels, kFrames, 0.5);
+
+  for (int frame = 0; frame < kFrames; ++frame)
+  {
+    RequireNear(left[frame], 0.5 * (frame + 1), "global output must scale channel A");
+    RequireNear(right[frame], 5.0 * (frame + 1), "global output must scale channel B");
+  }
+}
+
 void TestSelectsIndependentChannelsForMetering()
 {
   std::array<double, kFrames> left{1.0, 2.0, 3.0, 4.0};
@@ -217,6 +232,7 @@ int main()
   TestAppliesIndependentInputGainsBeforeEachModel();
   TestConvertsInputGainDecibelsToLinearAmplitude();
   TestAppliesIndependentOutputGainsAfterProcessing();
+  TestAppliesGlobalOutputGainAfterBranchOutputs();
   TestSelectsIndependentChannelsForMetering();
   TestProcessesStereoBranchesThroughIndependentEffects();
   TestBypassesEachStereoEffectIndependently();

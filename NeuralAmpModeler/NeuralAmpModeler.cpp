@@ -570,6 +570,7 @@ void NeuralAmpModeler::OnParamChange(int paramIdx)
     // Changes to the output gain
     case kModelAOutputLevel:
     case kModelBOutputLevel: _SetModelOutputGains(); break;
+    case kOutputLevel: _SetGlobalOutputGain(); break;
     // Independent tone stacks:
     case kModelABass: mToneStacks[0]->SetParam("bass", GetParam(paramIdx)->Value()); break;
     case kModelAMid: mToneStacks[0]->SetParam("middle", GetParam(paramIdx)->Value()); break;
@@ -764,6 +765,11 @@ void NeuralAmpModeler::_SetModelOutputGains()
     dualnam::DecibelsToLinear(GetParam(kModelBOutputLevel)->Value());
 }
 
+void NeuralAmpModeler::_SetGlobalOutputGain()
+{
+  mGlobalOutputGain = dualnam::DecibelsToLinear(GetParam(kOutputLevel)->Value());
+}
+
 void NeuralAmpModeler::_ApplySlimParamToLoadedNAMs()
 {
   const double v = GetParam(kSlim)->Value();
@@ -951,6 +957,7 @@ void NeuralAmpModeler::_ProcessOutput(iplug::sample** inputs, iplug::sample** ou
     throw std::runtime_error("DualNAM requires two internal output channels.");
 
   dualnam::ApplyStereoOutputGains(inputs, outputs, static_cast<int>(nFrames), mModelOutputGains, nChansOut);
+  dualnam::ApplyGlobalStereoGain(outputs, static_cast<int>(nFrames), mGlobalOutputGain, nChansOut);
 
 #ifdef APP_API // Ensure valid output to interface
   for (size_t channel = 0; channel < nChansOut; ++channel)

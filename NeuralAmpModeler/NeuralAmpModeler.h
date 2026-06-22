@@ -279,6 +279,7 @@ private:
   void _SetInputGain();
   void _SetModelInputGains();
   void _SetModelOutputGains();
+  void _SetGlobalOutputGain();
   void _ApplySlimParamToLoadedNAMs();
 
   // See: Unserialization.cpp
@@ -316,6 +317,7 @@ private:
   double mInputGain = 1.0;
   double mModelInputGains[dualnam::kStereoChannels]{1.0, 1.0};
   double mModelOutputGains[dualnam::kStereoChannels]{1.0, 1.0};
+  double mGlobalOutputGain = 1.0;
 
   // Noise gates
   dsp::noise_gate::Trigger mNoiseGateTrigger;
