@@ -151,6 +151,12 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
 
     const auto b = pGraphics->GetBounds();
     const auto settingsButtonArea = CornerButtonArea(b);
+    const IColor editorBaseColor(255, 18, 22, 28);
+    const IColor globalStripColor(255, 24, 31, 40);
+    pGraphics->AttachControl(new ILambdaControl(
+      b, [editorBaseColor](ILambdaControl*, IGraphics& graphics, IRECT& rect) {
+        graphics.FillRect(editorBaseColor, rect);
+      }, DEFAULT_ANIMATION_DURATION, false, false, kNoParameter, true));
 
     // Model loader button
     auto makeLoadModelCompletionHandler = [&](const dualnam::ModelSlot slot) {
@@ -215,25 +221,42 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     };
 
     auto attachGlobalStrip = [&](const IRECT& stripBounds) {
-      const auto knobSize = 75.0f;
-      const auto knobTop = stripBounds.T + 12.0f;
-      const auto knobGap = 22.0f;
+      const auto knobWidth = 82.0f;
+      const auto knobHeight = 84.0f;
+      const auto knobTop = stripBounds.T + 20.0f;
+      const auto knobGap = 28.0f;
       const auto firstKnobLeft = stripBounds.L + 35.0f;
       const auto globalInputArea =
-        IRECT(firstKnobLeft, knobTop, firstKnobLeft + knobSize, knobTop + knobSize);
-      const auto gateThresholdArea = globalInputArea.GetHShifted(knobSize + knobGap);
-      const auto globalOutputArea = gateThresholdArea.GetHShifted(knobSize + knobGap);
+        IRECT(firstKnobLeft, knobTop, firstKnobLeft + knobWidth, knobTop + knobHeight);
+      const auto gateThresholdArea = globalInputArea.GetHShifted(knobWidth + knobGap);
+      const auto globalOutputArea = gateThresholdArea.GetHShifted(knobWidth + knobGap);
+      const auto labelHeight = 18.0f;
+      const auto globalInputLabelArea =
+        IRECT(globalInputArea.L - 8.0f, stripBounds.T + 2.0f, globalInputArea.R + 8.0f, stripBounds.T + labelHeight);
+      const auto gateThresholdLabelArea =
+        IRECT(gateThresholdArea.L - 14.0f, stripBounds.T + 2.0f, gateThresholdArea.R + 14.0f,
+              stripBounds.T + labelHeight);
+      const auto globalOutputLabelArea =
+        IRECT(globalOutputArea.L - 8.0f, stripBounds.T + 2.0f, globalOutputArea.R + 8.0f, stripBounds.T + labelHeight);
       const auto gateToggleArea =
-        IRECT(gateThresholdArea.L - 4.0f, stripBounds.B - 28.0f, gateThresholdArea.R + 4.0f, stripBounds.B - 4.0f);
+        IRECT(gateThresholdArea.L - 9.0f, stripBounds.B - 31.0f, gateThresholdArea.R + 9.0f, stripBounds.B - 5.0f);
+      const auto globalLabelStyle =
+        style.WithShowValue(false).WithLabelText(IText(12.0f, EVAlign::Middle, PluginColors::NAM_THEMEFONTCOLOR));
 
-      pGraphics->AttachControl(new IBitmapControl(stripBounds, backgroundBitmap));
-      pGraphics->AttachControl(new IBitmapControl(stripBounds, linesBitmap));
+      pGraphics->AttachControl(new ILambdaControl(
+        stripBounds, [globalStripColor](ILambdaControl*, IGraphics& graphics, IRECT& rect) {
+          graphics.FillRect(globalStripColor, rect);
+          graphics.DrawRect(PluginColors::NAM_THEMECOLOR.WithOpacity(0.35f), rect, nullptr, 1.0f);
+        }, DEFAULT_ANIMATION_DURATION, false, false, kNoParameter, true));
+      pGraphics->AttachControl(new IVLabelControl(globalInputLabelArea, "GLOBAL INPUT", globalLabelStyle));
+      pGraphics->AttachControl(new IVLabelControl(gateThresholdLabelArea, "GATE THRESHOLD", globalLabelStyle));
+      pGraphics->AttachControl(new IVLabelControl(globalOutputLabelArea, "GLOBAL OUTPUT", globalLabelStyle));
       pGraphics->AttachControl(
-        new NAMKnobControl(globalInputArea, kInputLevel, "GLOBAL INPUT", style, knobBackgroundBitmap));
+        new NAMKnobControl(globalInputArea, kInputLevel, "", style, knobBackgroundBitmap));
       pGraphics->AttachControl(
-        new NAMKnobControl(gateThresholdArea, kNoiseGateThreshold, "GATE THRESHOLD", style, knobBackgroundBitmap));
+        new NAMKnobControl(gateThresholdArea, kNoiseGateThreshold, "", style, knobBackgroundBitmap));
       pGraphics->AttachControl(
-        new NAMKnobControl(globalOutputArea, kOutputLevel, "GLOBAL OUTPUT", style, knobBackgroundBitmap));
+        new NAMKnobControl(globalOutputArea, kOutputLevel, "", style, knobBackgroundBitmap));
       pGraphics->AttachControl(
         new NAMSwitchControl(gateToggleArea, kNoiseGateActive, "Noise Gate", style, switchHandleBitmap));
     };
@@ -325,7 +348,7 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
       }
     };
 
-    const auto globalStripHeight = 120.0f;
+    const auto globalStripHeight = 140.0f;
     const auto globalStrip = b.GetFromTop(globalStripHeight);
     const auto channelPanels = b.GetReducedFromTop(globalStripHeight);
     const auto channelPanelWidth = channelPanels.W() / 2.0f;

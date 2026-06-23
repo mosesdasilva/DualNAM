@@ -147,7 +147,7 @@ Progress:
   15 and 16 with a -40 dB to +40 dB range and 0 dB defaults. Schema version 3
   persists them; older shared Output values migrate into both branches. The
   original Output parameter remains at stable ID 5 and now serves as Global
-  Output. The editor is now 1200x520, with a 120-pixel global strip above two
+  Output. The editor is now 1200x540, with a 140-pixel global strip above two
   identical 600x400 channel panels. Model loading, branch input gain, branch
   output gain, and mono input/output meters are functional on both panels. Each
   input meter reads its branch after Input A/B; each output meter reads its
@@ -156,13 +156,16 @@ Progress:
   owns a separate mono tone-stack DSP instance. Schema version 4 persists the
   eight EQ parameters; older shared EQ values migrate into both branches.
   Legacy Bass/Middle/Treble/ToneStack parameter IDs remain reserved for host
-  compatibility but no longer drive active DSP. The editor is now 1200x520:
-  a 120-pixel shared strip above the channel panels contains Global Input, the
+  compatibility but no longer drive active DSP. The editor is now 1200x540:
+  a 140-pixel shared strip above the channel panels contains Global Input, the
   one shared stereo noise-gate threshold/toggle, and Global Output. Global
   Output uses stable parameter ID 5 and is applied after Output A/B. Schema
   version 5 activates that master output while migrating schemas 1 through 4
   without applying their old shared Output value twice. Channel A retains the
   inherited shared IR, while the Channel B IR selector remains disabled.
+  The editor has an opaque full-size base and separately drawn strip
+  background. Global labels are separate controls, and the gate switch has a
+  dedicated non-overlapping hit rectangle.
 - Remaining: another manual host save/reopen verification for the new controls.
   Replace placeholders one behavior at a time as independent IR paths are
   implemented.

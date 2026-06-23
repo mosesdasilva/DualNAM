@@ -656,7 +656,7 @@ object and state path exist.
 
 ### Global control strip
 
-The editor is 1200x520. A new 120-pixel strip spans the top, while the two
+The editor is 1200x540. A new 140-pixel strip spans the top, while the two
 mirrored channel panels retain their 600x400 dimensions below it. The strip
 contains:
 
@@ -671,6 +671,18 @@ Global Input -> Input A/B -> branch DSP -> Output A/B -> Global Output
 ```
 
 Global Output changes final level without altering the balance between A and B.
+
+The original background bitmap is exactly 600x400. iPlug2 bitmap controls
+center native-size images instead of stretching them to arbitrary rectangles.
+The global strip therefore uses an opaque vector-drawn background, and the
+whole editor has an opaque base beneath all controls. This prevents uncovered
+areas from showing the host's magenta clear color.
+
+The global knob labels are independent label controls. Their knob controls use
+empty internal labels, preventing the indicator track, bitmap, label, and value
+text from competing for the same compact rectangle. The gate switch has its
+own rectangle below the threshold knob so its click area does not overlap a
+knob.
 
 ### Independent EQ
 
@@ -1103,7 +1115,7 @@ queue.
 - independent post-processing Output A and Output B gain parameters;
 - independent input and output meters for Channel A and Channel B;
 - independent EQ switches and Bass/Middle/Treble controls for both branches;
-- 1200x520 editor with a global strip above mirrored Channel A/B panels;
+- 1200x540 editor with a global strip above mirrored Channel A/B panels;
 - Global Input, shared stereo noise gate, and Global Output controls;
 - functional model browser and branch input control on both panels;
 - disabled Channel B placeholders for future independent processing;

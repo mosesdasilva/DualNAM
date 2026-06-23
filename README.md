@@ -30,7 +30,7 @@ is implemented and tested:
 - independent `Output A` and `Output B` trims feed the left and right host
   outputs respectively, each ranging from -40 dB to +40 dB with a 0 dB
   default;
-- the editor is a 1200x520 layout with a shared 120-pixel strip above the
+- the editor is a 1200x540 layout with a shared 140-pixel strip above the
   Channel A and Channel B panels;
 - both panels have matching control positions; model loading, branch input
   gain, and branch output gain are active on both sides, while unimplemented
@@ -42,6 +42,8 @@ is implemented and tested:
   Treble controls, backed by separate mono tone-stack DSP instances;
 - the top strip contains Global Input, the shared stereo Noise Gate threshold
   and toggle, and Global Output after the two branch output gains;
+- opaque editor/strip backgrounds and separate global labels prevent bitmap
+  gaps and compact-knob label overlap;
 - an unloaded slot is silent.
 
 The installed bundles now use the DualNAM name, version `0.1.0`, and unique
