@@ -129,6 +129,8 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
 
     pGraphics->LoadFont("Roboto-Regular", ROBOTO_FN);
     pGraphics->LoadFont("Michroma-Regular", MICHROMA_FN);
+    pGraphics->LoadFont("Inter-Regular", INTER_REGULAR_FN);
+    pGraphics->LoadFont("Inter-SemiBold", INTER_SEMIBOLD_FN);
 
     const auto gearSVG = pGraphics->LoadSVG(GEAR_FN);
     const auto fileSVG = pGraphics->LoadSVG(FILE_FN);
@@ -151,8 +153,11 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
 
     const auto b = pGraphics->GetBounds();
     const auto settingsButtonArea = CornerButtonArea(b);
-    const IColor editorBaseColor(255, 18, 22, 28);
-    const IColor globalStripColor(255, 24, 31, 40);
+    const IColor editorBaseColor(255, 0, 0, 0);
+    const IColor penpotStripColor(255, 48, 48, 48);
+    const IColor channelAPanelColor(255, 225, 225, 225);
+    const IColor channelBPanelColor(255, 225, 0, 0);
+    const IColor globalStripColor = penpotStripColor;
     pGraphics->AttachControl(new ILambdaControl(
       b, [editorBaseColor](ILambdaControl*, IGraphics& graphics, IRECT& rect) {
         graphics.FillRect(editorBaseColor, rect);
@@ -221,44 +226,54 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     };
 
     auto attachGlobalStrip = [&](const IRECT& stripBounds) {
-      const auto knobWidth = 82.0f;
-      const auto knobHeight = 84.0f;
-      const auto knobTop = stripBounds.T + 20.0f;
-      const auto knobGap = 28.0f;
-      const auto firstKnobLeft = stripBounds.L + 35.0f;
+      const auto knobWidth = 32.5f;
+      const auto knobHeight = 52.0f;
+      const auto knobTop = stripBounds.T + 8.0f;
+      const auto firstKnobLeft = stripBounds.L + 32.0f;
+      const auto gateKnobLeft = stripBounds.L + 136.5f;
+      const auto outputKnobLeft = stripBounds.L + 197.0f;
       const auto globalInputArea =
         IRECT(firstKnobLeft, knobTop, firstKnobLeft + knobWidth, knobTop + knobHeight);
-      const auto gateThresholdArea = globalInputArea.GetHShifted(knobWidth + knobGap);
-      const auto globalOutputArea = gateThresholdArea.GetHShifted(knobWidth + knobGap);
-      const auto labelHeight = 18.0f;
+      const auto gateThresholdArea =
+        IRECT(gateKnobLeft, knobTop, gateKnobLeft + knobWidth, knobTop + knobHeight);
+      const auto globalOutputArea =
+        IRECT(outputKnobLeft, knobTop, outputKnobLeft + knobWidth, knobTop + knobHeight);
+      const auto labelHeight = 14.0f;
       const auto globalInputLabelArea =
-        IRECT(globalInputArea.L - 8.0f, stripBounds.T + 2.0f, globalInputArea.R + 8.0f, stripBounds.T + labelHeight);
+        IRECT(globalInputArea.L, stripBounds.T + 3.0f, globalInputArea.R, stripBounds.T + labelHeight);
       const auto gateThresholdLabelArea =
-        IRECT(gateThresholdArea.L - 14.0f, stripBounds.T + 2.0f, gateThresholdArea.R + 14.0f,
-              stripBounds.T + labelHeight);
+        IRECT(gateThresholdArea.L, stripBounds.T + 3.0f, gateThresholdArea.R, stripBounds.T + labelHeight);
       const auto globalOutputLabelArea =
-        IRECT(globalOutputArea.L - 8.0f, stripBounds.T + 2.0f, globalOutputArea.R + 8.0f, stripBounds.T + labelHeight);
+        IRECT(globalOutputArea.L, stripBounds.T + 3.0f, globalOutputArea.R, stripBounds.T + labelHeight);
       const auto gateToggleArea =
-        IRECT(gateThresholdArea.L - 9.0f, stripBounds.B - 31.0f, gateThresholdArea.R + 9.0f, stripBounds.B - 5.0f);
+        IRECT(stripBounds.L + 92.5f, stripBounds.T + 13.0f, stripBounds.L + 108.5f, stripBounds.T + 45.0f);
       const auto globalLabelStyle =
-        style.WithShowValue(false).WithLabelText(IText(12.0f, EVAlign::Middle, PluginColors::NAM_THEMEFONTCOLOR));
+        DEFAULT_STYLE.WithShowLabel(false)
+          .WithShowValue(false)
+          .WithDrawFrame(false)
+          .WithDrawShadows(false)
+          .WithValueText(IText(10.0f, COLOR_WHITE, "Inter-SemiBold", EAlign::Center, EVAlign::Middle));
+      const auto globalKnobStyle =
+        DEFAULT_STYLE.WithShowLabel(false)
+          .WithShowValue(false)
+          .WithDrawFrame(false)
+          .WithDrawShadows(false)
+          .WithColor(kFR, COLOR_TRANSPARENT);
 
       pGraphics->AttachControl(new ILambdaControl(
         stripBounds, [globalStripColor](ILambdaControl*, IGraphics& graphics, IRECT& rect) {
-          graphics.FillRect(globalStripColor, rect);
-          graphics.DrawRect(PluginColors::NAM_THEMECOLOR.WithOpacity(0.35f), rect, nullptr, 1.0f);
+          graphics.FillRoundRect(globalStripColor, rect, 25.0f);
         }, DEFAULT_ANIMATION_DURATION, false, false, kNoParameter, true));
-      pGraphics->AttachControl(new IVLabelControl(globalInputLabelArea, "GLOBAL INPUT", globalLabelStyle));
-      pGraphics->AttachControl(new IVLabelControl(gateThresholdLabelArea, "GATE THRESHOLD", globalLabelStyle));
-      pGraphics->AttachControl(new IVLabelControl(globalOutputLabelArea, "GLOBAL OUTPUT", globalLabelStyle));
+      pGraphics->AttachControl(new IVLabelControl(globalInputLabelArea, "INPUT", globalLabelStyle));
+      pGraphics->AttachControl(new IVLabelControl(gateThresholdLabelArea, "GATE", globalLabelStyle));
+      pGraphics->AttachControl(new IVLabelControl(globalOutputLabelArea, "OUTPUT", globalLabelStyle));
       pGraphics->AttachControl(
-        new NAMKnobControl(globalInputArea, kInputLevel, "", style, knobBackgroundBitmap));
+        new DualNAMVectorKnob(globalInputArea, kInputLevel, "", globalKnobStyle, COLOR_WHITE, COLOR_BLACK, 1.0f));
+      pGraphics->AttachControl(new DualNAMVectorKnob(gateThresholdArea, kNoiseGateThreshold, "", globalKnobStyle,
+                                                     COLOR_WHITE, COLOR_BLACK, 1.0f));
       pGraphics->AttachControl(
-        new NAMKnobControl(gateThresholdArea, kNoiseGateThreshold, "", style, knobBackgroundBitmap));
-      pGraphics->AttachControl(
-        new NAMKnobControl(globalOutputArea, kOutputLevel, "", style, knobBackgroundBitmap));
-      pGraphics->AttachControl(
-        new NAMSwitchControl(gateToggleArea, kNoiseGateActive, "Noise Gate", style, switchHandleBitmap));
+        new DualNAMVectorKnob(globalOutputArea, kOutputLevel, "", globalKnobStyle, COLOR_WHITE, COLOR_BLACK, 1.0f));
+      pGraphics->AttachControl(new DualNAMVectorSwitch(gateToggleArea, kNoiseGateActive, "", style, true));
     };
 
     auto attachChannelPanel = [&](const IRECT& panelBounds, const char* channelTitle, const dualnam::ModelSlot modelSlot,
@@ -266,7 +281,8 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
                                   const int clearModelMessage, const char* defaultModelString, const int inputMeterTag,
                                   const int outputMeterTag, const int eqActiveParam, const int bassParam,
                                   const int midParam, const int trebleParam, const char* eqGroup,
-                                  const bool sharedControlsActive) {
+                                  const bool sharedControlsActive, const IColor panelColor, const IColor knobColor,
+                                  const IColor knobIndicatorColor, const IColor panelTextColor) {
       const auto mainArea = panelBounds.GetPadded(-20);
       const auto contentArea = mainArea.GetPadded(-10);
       const auto titleHeight = 50.0f;
@@ -283,54 +299,61 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
       const auto outputKnobArea = knobsArea.GetGridCell(0, 4, 1, channelKnobCount).GetPadded(2.0f);
       const auto eqToggleArea = midKnobArea.GetVShifted(midKnobArea.H()).SubRectVertical(2, 0).GetReducedFromTop(10.0f);
 
-      const auto fileWidth = 200.0f;
       const auto fileHeight = 30.0f;
-      const auto modelRow = contentArea.GetFromBottom(2.0f * fileHeight).GetFromTop(fileHeight).GetVShifted(-1.0f);
-      const auto modelArea = modelRow.GetFromLeft(fileWidth).GetHShifted(35.0f);
-      const auto modelIconArea = modelArea.GetFromLeft(30.0f).GetTranslated(-40.0f, 10.0f);
-      const auto slimIconArea =
-        IRECT(modelArea.R + 6.0f, modelArea.MH() - 14.0f, modelArea.R + 62.0f, modelArea.MH() + 14.0f);
-      const auto irArea = modelRow.GetMidHPadded(fileWidth).GetVShifted(38.0f);
-      const auto irSwitchArea = irArea.GetFromLeft(30.0f).GetHShifted(-40.0f).GetScaledAboutCentre(0.6f);
+      const auto selectorLeft = panelBounds.L + 10.0f;
+      const auto selectorRight = panelBounds.R - 10.0f;
+      const auto modelArea = IRECT(selectorLeft, 360.0f, selectorRight, 360.0f + fileHeight);
+      const auto irArea = IRECT(selectorLeft, 400.0f, selectorRight, 400.0f + fileHeight);
       const auto inputMeterArea =
         contentArea.GetFromLeft(30.0f).GetHShifted(-20.0f).GetMidVPadded(100.0f).GetVShifted(-25.0f);
       const auto outputMeterArea =
         contentArea.GetFromRight(30.0f).GetHShifted(20.0f).GetMidVPadded(100.0f).GetVShifted(-25.0f);
 
-      pGraphics->AttachControl(new IBitmapControl(panelBounds, backgroundBitmap));
-      pGraphics->AttachControl(new IBitmapControl(panelBounds, linesBitmap));
-      pGraphics->AttachControl(new IVLabelControl(titleArea, channelTitle, titleStyle));
-      pGraphics->AttachControl(new ISVGControl(modelIconArea, modelIconSVG));
+      const auto channelTitleStyle =
+        DEFAULT_STYLE.WithShowLabel(false)
+          .WithShowValue(false)
+          .WithValueText(IText(30.0f, panelTextColor, "Inter-SemiBold", EAlign::Center, EVAlign::Middle))
+          .WithDrawShadows(false)
+          .WithDrawFrame(false);
+      const auto channelKnobStyle =
+        style.WithDrawFrame(false)
+          .WithDrawShadows(false)
+          .WithColor(kFR, COLOR_TRANSPARENT)
+          .WithLabelText(IText(21.0f, panelTextColor, "Inter-SemiBold"))
+          .WithValueText(IText(14.0f, panelTextColor, "Inter-SemiBold", EAlign::Center, EVAlign::Bottom));
+
+      pGraphics->AttachControl(new ILambdaControl(
+        panelBounds, [panelColor](ILambdaControl*, IGraphics& graphics, IRECT& rect) {
+          graphics.FillRoundRect(panelColor, rect, 25.0f);
+        }, DEFAULT_ANIMATION_DURATION, false, false, kNoParameter, true));
+      pGraphics->AttachControl(new IVLabelControl(titleArea, channelTitle, channelTitleStyle));
 
       pGraphics->AttachControl(
         new NAMFileBrowserControl(modelArea, clearModelMessage, defaultModelString, "nam",
                                   makeLoadModelCompletionHandler(modelSlot), style, fileSVG, crossSVG, leftArrowSVG,
-                                  rightArrowSVG, fileBackgroundBitmap, globeSVG, "Get NAM Models", getUrl),
+                                  rightArrowSVG, fileBackgroundBitmap, globeSVG, "Get NAM Models", getUrl, true),
         modelBrowserTag);
 
-      auto* slimControl = new NAMSquareButtonControl(slimIconArea, DefaultClickActionFunc, slimIconSVG);
-      pGraphics->AttachControl(slimControl, sharedControlsActive ? kCtrlTagSlimmableIcon : -1);
-      if (sharedControlsActive)
-        slimControl->SetAnimationEndActionFunction(showSlimOverlay)->Hide(true);
-      else
-        slimControl->SetDisabled(true);
-
-      auto* irSwitch = new ISVGSwitchControl(irSwitchArea, {irIconOffSVG, irIconOnSVG}, kIRToggle);
-      pGraphics->AttachControl(irSwitch);
       auto* irBrowser =
         new NAMFileBrowserControl(irArea, kMsgTagClearIR, defaultIRString.c_str(), "wav", loadIRCompletionHandler, style,
                                   fileSVG, crossSVG, leftArrowSVG, rightArrowSVG, fileBackgroundBitmap, globeSVG,
-                                  "Get IRs", getUrl);
+                                  "Get IRs", getUrl, true);
       pGraphics->AttachControl(irBrowser, sharedControlsActive ? kCtrlTagIRFileBrowser : -1);
 
-      auto* eqSwitch = new NAMSwitchControl(eqToggleArea, eqActiveParam, "EQ", style, switchHandleBitmap);
+      const auto eqSwitchStyle = style.WithLabelText(IText(13.0f, panelTextColor, "Inter-SemiBold"));
+      auto* eqSwitch = new DualNAMVectorSwitch(eqToggleArea, eqActiveParam, "", eqSwitchStyle);
       pGraphics->AttachControl(eqSwitch);
 
-      pGraphics->AttachControl(new NAMKnobControl(inputKnobArea, modelInputParam, "", style, knobBackgroundBitmap));
-      auto* bassKnob = new NAMKnobControl(bassKnobArea, bassParam, "", style, knobBackgroundBitmap);
-      auto* midKnob = new NAMKnobControl(midKnobArea, midParam, "", style, knobBackgroundBitmap);
-      auto* trebleKnob = new NAMKnobControl(trebleKnobArea, trebleParam, "", style, knobBackgroundBitmap);
-      auto* outputKnob = new NAMKnobControl(outputKnobArea, modelOutputParam, "", style, knobBackgroundBitmap);
+      pGraphics->AttachControl(
+        new DualNAMVectorKnob(inputKnobArea, modelInputParam, "INPUT", channelKnobStyle, knobColor, knobIndicatorColor));
+      auto* bassKnob =
+        new DualNAMVectorKnob(bassKnobArea, bassParam, "BASS", channelKnobStyle, knobColor, knobIndicatorColor);
+      auto* midKnob =
+        new DualNAMVectorKnob(midKnobArea, midParam, "MID", channelKnobStyle, knobColor, knobIndicatorColor);
+      auto* trebleKnob =
+        new DualNAMVectorKnob(trebleKnobArea, trebleParam, "TREBLE", channelKnobStyle, knobColor, knobIndicatorColor);
+      auto* outputKnob = new DualNAMVectorKnob(outputKnobArea, modelOutputParam, "OUTPUT", channelKnobStyle, knobColor,
+                                               knobIndicatorColor);
       pGraphics->AttachControl(bassKnob, -1, eqGroup);
       pGraphics->AttachControl(midKnob, -1, eqGroup);
       pGraphics->AttachControl(trebleKnob, -1, eqGroup);
@@ -343,24 +366,27 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
 
       if (!sharedControlsActive)
       {
-        irSwitch->SetDisabled(true);
         irBrowser->SetDisabled(true);
       }
     };
 
-    const auto globalStripHeight = 140.0f;
-    const auto globalStrip = b.GetFromTop(globalStripHeight);
-    const auto channelPanels = b.GetReducedFromTop(globalStripHeight);
-    const auto channelPanelWidth = channelPanels.W() / 2.0f;
+    const auto globalStrip = IRECT(10.0f, 10.0f, 1190.0f, 70.0f);
+    const auto channelAPanel = IRECT(10.0f, 80.0f, 595.0f, 440.0f);
+    const auto channelBPanel = IRECT(605.0f, 80.0f, 1190.0f, 440.0f);
+    const auto mixerStrip = IRECT(10.0f, 450.0f, 1190.0f, 510.0f);
     attachGlobalStrip(globalStrip);
-    attachChannelPanel(channelPanels.GetFromLeft(channelPanelWidth), "CHANNEL A", dualnam::ModelSlot::A, kModelAInputLevel,
-                       kModelAOutputLevel, kCtrlTagModelAFileBrowser, kMsgTagClearModelA,
-                       defaultNamAFileString.c_str(), kCtrlTagInputMeterA, kCtrlTagOutputMeterA, kModelAEQActive,
-                       kModelABass, kModelAMid, kModelATreble, "EQ_A_KNOBS", true);
-    attachChannelPanel(channelPanels.GetFromRight(channelPanelWidth), "CHANNEL B", dualnam::ModelSlot::B, kModelBInputLevel,
-                       kModelBOutputLevel, kCtrlTagModelBFileBrowser, kMsgTagClearModelB,
-                       defaultNamBFileString.c_str(), kCtrlTagInputMeterB, kCtrlTagOutputMeterB, kModelBEQActive,
-                       kModelBBass, kModelBMid, kModelBTreble, "EQ_B_KNOBS", false);
+    attachChannelPanel(channelAPanel, "CHANNEL A", dualnam::ModelSlot::A, kModelAInputLevel, kModelAOutputLevel,
+                       kCtrlTagModelAFileBrowser, kMsgTagClearModelA, defaultNamAFileString.c_str(),
+                       kCtrlTagInputMeterA, kCtrlTagOutputMeterA, kModelAEQActive, kModelABass, kModelAMid,
+                       kModelATreble, "EQ_A_KNOBS", true, channelAPanelColor, COLOR_BLACK, COLOR_WHITE, COLOR_BLACK);
+    attachChannelPanel(channelBPanel, "CHANNEL B", dualnam::ModelSlot::B, kModelBInputLevel, kModelBOutputLevel,
+                       kCtrlTagModelBFileBrowser, kMsgTagClearModelB, defaultNamBFileString.c_str(),
+                       kCtrlTagInputMeterB, kCtrlTagOutputMeterB, kModelBEQActive, kModelBBass, kModelBMid,
+                       kModelBTreble, "EQ_B_KNOBS", false, channelBPanelColor, COLOR_WHITE, COLOR_BLACK, COLOR_WHITE);
+    pGraphics->AttachControl(new ILambdaControl(
+      mixerStrip, [penpotStripColor](ILambdaControl*, IGraphics& graphics, IRECT& rect) {
+        graphics.FillRoundRect(penpotStripColor, rect, 25.0f);
+      }, DEFAULT_ANIMATION_DURATION, false, false, kNoParameter, true));
 
     // Settings/help/about box
     pGraphics->AttachControl(new NAMCircleButtonControl(

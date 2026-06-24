@@ -121,6 +121,108 @@ public:
   }
 };
 
+class DualNAMVectorKnob : public IVKnobControl
+{
+public:
+  DualNAMVectorKnob(const IRECT& bounds, int paramIdx, const char* label, const IVStyle& style,
+                    IColor knobColor = COLOR_WHITE, IColor indicatorColor = COLOR_BLACK, float knobScale = 0.82f)
+  : IVKnobControl(bounds, paramIdx, label, style, true)
+  , mKnobColor(knobColor)
+  , mIndicatorColor(indicatorColor)
+  , mKnobScale(knobScale)
+  {
+  }
+
+  void DrawWidget(IGraphics& g) override
+  {
+    const auto knobBounds = mWidgetBounds.GetCentredInside(mWidgetBounds.W() * mKnobScale);
+    const float cx = knobBounds.MW();
+    const float cy = knobBounds.MH();
+    const float radius = knobBounds.W() * 0.5f;
+    const float angle = mAngle1 + (static_cast<float>(GetValue()) * (mAngle2 - mAngle1));
+    float indicatorPoints[2][2];
+
+    g.FillEllipse(mKnobColor, knobBounds, &mBlend);
+    if (mMouseIsOver)
+      g.DrawEllipse(COLOR_WHITE.WithOpacity(0.35f), knobBounds, &mBlend, 1.5f);
+
+    RadialPoints(angle, cx, cy, 0.0f, radius, 2, indicatorPoints);
+    g.DrawLine(mIndicatorColor, indicatorPoints[0][0], indicatorPoints[0][1], indicatorPoints[1][0],
+               indicatorPoints[1][1], &mBlend, 5.0f);
+  }
+
+private:
+  IColor mKnobColor;
+  IColor mIndicatorColor;
+  float mKnobScale;
+};
+
+class DualNAMVectorSwitch : public IVSlideSwitchControl
+{
+public:
+  DualNAMVectorSwitch(const IRECT& bounds, int paramIdx, const char* label, const IVStyle& style,
+                      bool vertical = false)
+  : IVSlideSwitchControl(bounds, paramIdx, label,
+                         style.WithRoundness(1.0f)
+                           .WithShowValue(false)
+                           .WithDrawFrame(false)
+                           .WithDrawShadows(false)
+                           .WithWidgetFrac(0.62f)
+                           .WithLabelOrientation(EOrientation::South))
+  , mVertical(vertical)
+  {
+  }
+
+  void DrawWidget(IGraphics& g) override
+  {
+    const bool isOn = GetValue() > 0.5;
+    const IColor trackColor = isOn ? IColor(255, 0, 225, 0) : IColor(255, 0, 150, 0);
+    const auto trackBounds =
+      mVertical ? mWidgetBounds.GetCentredInside(32.0f, 64.0f) : mWidgetBounds.GetCentredInside(64.0f, 32.0f);
+    const auto handleBounds =
+      mVertical ? (isOn ? trackBounds.GetFromTop(28.0f) : trackBounds.GetFromBottom(28.0f)).GetCentredInside(28.0f, 28.0f)
+                : (isOn ? trackBounds.GetFromRight(28.0f) : trackBounds.GetFromLeft(28.0f))
+                    .GetCentredInside(28.0f, 28.0f);
+
+    g.FillRoundRect(trackColor, trackBounds, 16.0f, &mBlend);
+    if (mMouseIsOver)
+      g.DrawRoundRect(COLOR_WHITE.WithOpacity(0.35f), trackBounds, 16.0f, &mBlend, 1.5f);
+    g.FillEllipse(IColor(255, 251, 252, 255), handleBounds, &mBlend);
+  }
+
+private:
+  bool mVertical;
+};
+
+class DualNAMSettingsButtonControl : public IControl
+{
+public:
+  DualNAMSettingsButtonControl(const IRECT& bounds, IActionFunction action)
+  : IControl(bounds, action)
+  {
+  }
+
+  void Draw(IGraphics& g) override
+  {
+    const auto buttonBounds = mRECT.GetCentredInside(32.0f, 32.0f);
+    const auto centre = buttonBounds.GetCentredInside(14.0f, 14.0f);
+    const float cx = buttonBounds.MW();
+    const float cy = buttonBounds.MH();
+
+    g.FillEllipse(mMouseIsOver ? IColor(255, 70, 70, 70) : IColor(255, 0, 0, 0), buttonBounds, &mBlend);
+    g.FillEllipse(COLOR_WHITE, centre, &mBlend);
+    g.FillEllipse(IColor(255, 48, 48, 48), centre.GetCentredInside(6.0f, 6.0f), &mBlend);
+
+    for (int spoke = 0; spoke < 8; ++spoke)
+    {
+      const float angle = static_cast<float>(spoke) * 3.14159265358979323846f * 0.25f;
+      float points[2][2];
+      RadialPoints(angle, cx, cy, 10.0f, 15.0f, 2, points);
+      g.DrawLine(COLOR_WHITE, points[0][0], points[0][1], points[1][0], points[1][1], &mBlend, 2.0f);
+    }
+  }
+};
+
 class NAMSwitchControl : public IVSlideSwitchControl, public IBitmapBase
 {
 public:
@@ -267,12 +369,17 @@ public:
   NAMFileBrowserControl(const IRECT& bounds, int clearMsgTag, const char* labelStr, const char* fileExtension,
                         IFileDialogCompletionHandlerFunc ch, const IVStyle& style, const ISVG& loadSVG,
                         const ISVG& clearSVG, const ISVG& leftSVG, const ISVG& rightSVG, const IBitmap& bitmap,
-                        const ISVG& globeSVG, const char* getButtonLabel, const char* getButtonURL)
+                        const ISVG& globeSVG, const char* getButtonLabel, const char* getButtonURL,
+                        bool compactBlackBar = false)
   : IDirBrowseControlBase(bounds, fileExtension, false, false)
   , mClearMsgTag(clearMsgTag)
   , mDefaultLabelStr(labelStr)
   , mCompletionHandlerFunc(ch)
-  , mStyle(style.WithColor(kFG, COLOR_TRANSPARENT).WithDrawFrame(false))
+  , mStyle(style.WithColor(kFG, COLOR_TRANSPARENT)
+             .WithDrawFrame(false)
+             .WithDrawShadows(false)
+             .WithValueText(IText(13.0f, COLOR_WHITE, "Inter-SemiBold", EAlign::Near, EVAlign::Middle))
+             .WithLabelText(IText(13.0f, COLOR_WHITE, "Inter-SemiBold", EAlign::Near, EVAlign::Middle)))
   , mBitmap(bitmap)
   , mLoadSVG(loadSVG)
   , mClearSVG(clearSVG)
@@ -281,12 +388,19 @@ public:
   , mGlobeSVG(globeSVG)
   , mGetButtonLabel(getButtonLabel)
   , mGetButtonURL(getButtonURL)
+  , mCompactBlackBar(compactBlackBar)
   , mBrowserState(NAMBrowserState::Empty)
   {
     mIgnoreMouse = true;
   }
 
-  void Draw(IGraphics& g) override { g.DrawFittedBitmap(mBitmap, mRECT); }
+  void Draw(IGraphics& g) override
+  {
+    if (mCompactBlackBar)
+      g.FillRoundRect(COLOR_BLACK, mRECT, 25.0f);
+    else
+      g.DrawFittedBitmap(mBitmap, mRECT);
+  }
 
   void OnPopupMenuSelection(IPopupMenu* pSelectedMenu, int valIdx) override
   {
@@ -383,16 +497,19 @@ public:
       }
     };
 
-    IRECT padded = mRECT.GetPadded(-6.f).GetHPadded(-2.f);
+    IRECT padded = mCompactBlackBar ? mRECT.GetPadded(-3.0f) : mRECT.GetPadded(-6.f).GetHPadded(-2.f);
     const auto buttonWidth = padded.H();
-    const auto loadFileButtonBounds = padded.ReduceFromLeft(buttonWidth);
     const auto clearAndGetButtonBounds = padded.ReduceFromRight(buttonWidth);
-    const auto leftButtonBounds = padded.ReduceFromLeft(buttonWidth);
-    const auto rightButtonBounds = padded.ReduceFromLeft(buttonWidth);
+    const auto rightButtonBounds = padded.ReduceFromRight(buttonWidth);
+    const auto leftButtonBounds = padded.ReduceFromRight(buttonWidth);
+    const auto loadFileButtonBounds = mCompactBlackBar ? IRECT(0.0f, 0.0f, 0.0f, 0.0f) : padded.ReduceFromLeft(buttonWidth);
     const auto fileNameButtonBounds = padded;
 
-    AddChildControl(new NAMSquareButtonControl(loadFileButtonBounds, DefaultClickActionFunc, mLoadSVG))
-      ->SetAnimationEndActionFunction(loadFileFunc);
+    if (!mCompactBlackBar)
+    {
+      AddChildControl(new NAMSquareButtonControl(loadFileButtonBounds, DefaultClickActionFunc, mLoadSVG))
+        ->SetAnimationEndActionFunction(loadFileFunc);
+    }
     AddChildControl(new NAMSquareButtonControl(leftButtonBounds, DefaultClickActionFunc, mLeftSVG))
       ->SetAnimationEndActionFunction(prevFileFunc);
     AddChildControl(new NAMSquareButtonControl(rightButtonBounds, DefaultClickActionFunc, mRightSVG))
@@ -405,8 +522,11 @@ public:
     mClearButton->SetAnimationEndActionFunction(clearFileFunc);
     AddChildControl(mClearButton);
 
-    mGetButton = new NAMGetButtonControl(clearAndGetButtonBounds, mGetButtonLabel, mGetButtonURL, mGlobeSVG);
-    AddChildControl(mGetButton);
+    if (!mCompactBlackBar)
+    {
+      mGetButton = new NAMGetButtonControl(clearAndGetButtonBounds, mGetButtonLabel, mGetButtonURL, mGlobeSVG);
+      AddChildControl(mGetButton);
+    }
 
     // initialize control visibility
     SetBrowserState(NAMBrowserState::Empty);
@@ -474,11 +594,13 @@ private:
     {
       case NAMBrowserState::Empty:
         mClearButton->Hide(true);
-        mGetButton->Hide(false);
+        if (mGetButton)
+          mGetButton->Hide(false);
         break;
       case NAMBrowserState::Loaded:
         mClearButton->Hide(false);
-        mGetButton->Hide(true);
+        if (mGetButton)
+          mGetButton->Hide(true);
         break;
     }
   }
@@ -490,6 +612,7 @@ private:
   IBitmap mBitmap;
   ISVG mLoadSVG, mClearSVG, mLeftSVG, mRightSVG, mGlobeSVG;
   int mClearMsgTag;
+  bool mCompactBlackBar;
 
   // new members for the "Get" button
   const char* mGetButtonLabel;
@@ -752,31 +875,55 @@ public:
 
   void OnAttached() override
   {
-    const float pad = 20.0f;
-    const IVStyle titleStyle = DEFAULT_STYLE.WithValueText(IText(30, COLOR_WHITE, "Michroma-Regular"))
-                                 .WithDrawFrame(false)
-                                 .WithShadowOffset(2.f);
-    const auto text = IText(DEFAULT_TEXT_SIZE, EAlign::Center, PluginColors::HELP_TEXT);
+    const IColor settingsCanvasColor(255, 48, 48, 48);
+    const IColor settingsTextColor(255, 255, 255, 255);
+    const auto canvas = IRECT((GetRECT().W() - 585.0f) * 0.5f, 80.0f, (GetRECT().W() + 585.0f) * 0.5f, 440.0f);
+    const auto canvasContent = canvas.GetPadded(-24.0f);
+    const IVStyle titleStyle =
+      DEFAULT_STYLE.WithShowLabel(false)
+        .WithShowValue(false)
+        .WithDrawFrame(false)
+        .WithDrawShadows(false)
+        .WithValueText(IText(30.0f, settingsTextColor, "Inter-SemiBold", EAlign::Center, EVAlign::Middle));
+    const auto text = IText(13.0f, settingsTextColor, "Inter-Regular", EAlign::Center, EVAlign::Middle);
     const auto leftText = text.WithAlign(EAlign::Near);
-    const auto style = mStyle.WithDrawFrame(false).WithValueText(text);
+    const auto style = mStyle.WithDrawFrame(false).WithDrawShadows(false).WithValueText(text);
     const IVStyle leftStyle = style.WithValueText(leftText);
 
-    AddNamedChildControl(new IBitmapControl(GetRECT(), mBitmap), mControlNames.bitmap)->SetIgnoreMouse(true);
-    const auto titleArea = GetRECT().GetPadded(-(pad + 10.0f)).GetFromTop(50.0f);
+    AddNamedChildControl(new ILambdaControl(
+                           canvas,
+                           [settingsCanvasColor](ILambdaControl*, IGraphics& graphics, IRECT& rect) {
+                             graphics.FillRoundRect(settingsCanvasColor, rect, 25.0f);
+                           },
+                           DEFAULT_ANIMATION_DURATION, false, false, kNoParameter, true),
+                         mControlNames.bitmap)
+      ->SetIgnoreMouse(true);
+    const auto titleArea = canvasContent.GetFromTop(42.0f);
     AddNamedChildControl(new IVLabelControl(titleArea, "SETTINGS", titleStyle), mControlNames.title);
 
     // Attach input/output calibration controls
     {
-      const float height = NAM_KNOB_HEIGHT + NAM_SWTICH_HEIGHT + 10.0f;
-      const float width = titleArea.W();
-      const auto inputOutputArea = titleArea.GetFromBottom(height).GetTranslated(0.0f, height);
-      const auto inputArea = inputOutputArea.GetFromLeft(0.5f * width);
-      const auto outputArea = inputOutputArea.GetFromRight(0.5f * width);
+      const auto inputArea = IRECT(canvasContent.L + 10.0f, canvasContent.T + 70.0f, canvasContent.MW() - 14.0f,
+                                   canvasContent.T + 190.0f);
+      const auto outputArea = IRECT(canvasContent.MW() + 14.0f, canvasContent.T + 70.0f, canvasContent.R - 10.0f,
+                                    canvasContent.T + 190.0f);
+      const auto inputTitleArea = inputArea.GetFromTop(20.0f);
+      const auto outputTitleArea = outputArea.GetFromTop(20.0f);
+      const auto inputSwitchArea = IRECT(inputArea.L + 16.0f, inputArea.T + 38.0f, inputArea.L + 80.0f,
+                                         inputArea.T + 70.0f);
+      const auto inputLevelArea = IRECT(inputArea.L + 94.0f, inputArea.T + 39.0f, inputArea.R - 16.0f,
+                                        inputArea.T + 69.0f);
+      const auto outputRadioArea = IRECT(outputArea.L + 16.0f, outputArea.T + 30.0f, outputArea.R - 16.0f,
+                                         outputArea.B - 2.0f);
+      const auto sectionStyle =
+        DEFAULT_STYLE.WithShowLabel(false)
+          .WithShowValue(false)
+          .WithDrawFrame(false)
+          .WithDrawShadows(false)
+          .WithValueText(IText(15.0f, settingsTextColor, "Inter-SemiBold", EAlign::Near, EVAlign::Middle));
 
-      const float knobWidth = 87.0f; // HACK based on looking at the main page knobs.
-      const auto inputLevelArea =
-        inputArea.GetFromTop(NAM_KNOB_HEIGHT).GetFromBottom(25.0f).GetMidHPadded(0.5f * knobWidth);
-      const auto inputSwitchArea = inputArea.GetFromBottom(NAM_SWTICH_HEIGHT).GetMidHPadded(0.5f * knobWidth);
+      AddChildControl(new IVLabelControl(inputTitleArea, "INPUT CALIBRATION", sectionStyle));
+      AddChildControl(new IVLabelControl(outputTitleArea, "OUTPUT MODE", sectionStyle));
 
       auto* inputLevelControl = AddNamedChildControl(
         new InputLevelControl(inputLevelArea, kInputCalibrationLevel, mInputLevelBackgroundBitmap, text),
@@ -785,12 +932,9 @@ public:
         "The analog level, in dBu RMS, that corresponds to digital level of 0 dBFS peak in the host as its signal "
         "enters this plugin.");
       AddNamedChildControl(
-        new NAMSwitchControl(inputSwitchArea, kCalibrateInput, "Calibrate Input", mStyle, mSwitchBitmap),
+        new DualNAMVectorSwitch(inputSwitchArea, kCalibrateInput, "", mStyle),
         mControlNames.calibrateInput, kCtrlTagCalibrateInput);
 
-      // Same-ish height & width as input controls
-      const auto outputRadioArea = outputArea.GetFromBottom(
-        1.1f * (inputLevelArea.H() + inputSwitchArea.H())); // .GetMidHPadded(0.55f * knobWidth);
       const float buttonSize = 10.0f;
       auto* outputModeControl =
         AddNamedChildControl(new OutputModeControl(outputRadioArea, kOutputMode, mRadioButtonStyle, buttonSize),
@@ -800,8 +944,8 @@ public:
         "are about the same loudness.\nCalibrated=Match the input's digital-analog calibration.");
     }
 
-    const float halfWidth = PLUG_WIDTH / 2.0f - pad;
-    const auto bottomArea = GetRECT().GetPadded(-pad).GetFromBottom(78.0f);
+    const float halfWidth = canvasContent.W() * 0.5f - 10.0f;
+    const auto bottomArea = canvasContent.GetFromBottom(82.0f);
     const float lineHeight = 15.0f;
     const auto modelInfoArea = bottomArea.GetFromLeft(halfWidth).GetFromTop(4 * lineHeight);
     const auto aboutArea = bottomArea.GetFromRight(halfWidth).GetFromTop(5 * lineHeight);
@@ -811,8 +955,8 @@ public:
     auto closeAction = [&](IControl* pCaller) {
       static_cast<NAMSettingsPageControl*>(pCaller->GetParent())->HideAnimated(true);
     };
-    AddNamedChildControl(
-      new NAMSquareButtonControl(CornerButtonArea(GetRECT()), closeAction, mCloseSVG), mControlNames.close);
+    const auto closeArea = canvas.GetFromTRHC(44.0f, 44.0f).GetCentredInside(22.0f, 22.0f);
+    AddNamedChildControl(new NAMSquareButtonControl(closeArea, closeAction, mCloseSVG), mControlNames.close);
 
     OnResize();
   }
@@ -861,7 +1005,7 @@ private:
 
     void Draw(IGraphics& g) override
     {
-      g.DrawFittedBitmap(mBitmap, mRECT);
+      g.FillRoundRect(COLOR_BLACK, mRECT, 8.0f);
       ITextControl::Draw(g);
     };
 
@@ -909,15 +1053,10 @@ private:
 
       buildInfoStr.SetFormatted(100, "Version %s %s %s", verStr.Get(), PLUG()->GetArchStr(), PLUG()->GetAPIStr());
 
-      AddChildControl(new IURLControl(GetRECT().SubRectVertical(5, 0), "NEURAL AMP MODELER",
-                                      "https://www.neuralampmodeler.com", mText, COLOR_TRANSPARENT,
-                                      PluginColors::HELP_TEXT_MO, PluginColors::HELP_TEXT_CLICKED));
-      AddChildControl(new IVLabelControl(GetRECT().SubRectVertical(5, 1), "By Steven Atkinson", mStyle));
+      AddChildControl(new IVLabelControl(GetRECT().SubRectVertical(5, 0), "DualNAM", mStyle));
+      AddChildControl(new IVLabelControl(GetRECT().SubRectVertical(5, 1), "By Moses Da Silva", mStyle));
       AddChildControl(new IVLabelControl(GetRECT().SubRectVertical(5, 2), buildInfoStr.Get(), mStyle));
-      AddChildControl(new IURLControl(GetRECT().SubRectVertical(5, 3),
-                                      "Plug-in development: Steve Atkinson, Oli Larkin, ... ",
-                                      "https://github.com/sdatkinson/NeuralAmpModelerPlugin/graphs/contributors", mText,
-                                      COLOR_TRANSPARENT, PluginColors::HELP_TEXT_MO, PluginColors::HELP_TEXT_CLICKED));
+      AddChildControl(new IVLabelControl(GetRECT().SubRectVertical(5, 3), "Based on Neural Amp Modeler", mStyle));
       AddChildControl(new ThirdPartyNoticesControl(GetRECT().SubRectVertical(5, 4), mText));
     };
 
