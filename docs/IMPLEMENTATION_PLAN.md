@@ -165,7 +165,9 @@ Progress:
   inherited shared IR, while the Channel B IR selector remains disabled.
   The editor has an opaque full-size base and separately drawn strip
   background. Global labels are separate controls, and the gate switch has a
-  dedicated non-overlapping hit rectangle.
+  dedicated non-overlapping hit rectangle. The current GUI component surfaces
+  are stored as repo SVG assets and attached as SVG-backed controls where the
+  artwork should match the exported vector mockup.
 - Remaining: another manual host save/reopen verification for the new controls.
   Replace placeholders one behavior at a time as independent IR paths are
   implemented.

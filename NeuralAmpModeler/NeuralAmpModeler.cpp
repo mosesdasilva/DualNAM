@@ -135,8 +135,18 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     const auto fileSVG = pGraphics->LoadSVG(FILE_FN);
     const auto globeSVG = pGraphics->LoadSVG(GLOBE_ICON_FN);
     const auto crossSVG = pGraphics->LoadSVG(CLOSE_BUTTON_FN);
-    const auto rightArrowSVG = pGraphics->LoadSVG(RIGHT_ARROW_FN);
-    const auto leftArrowSVG = pGraphics->LoadSVG(LEFT_ARROW_FN);
+    const auto dualnamBoardSVG = pGraphics->LoadSVG(DUALNAM_BOARD_FN);
+    const auto dualnamGlobalStripSVG = pGraphics->LoadSVG(DUALNAM_GLOBAL_STRIP_FN);
+    const auto dualnamChannelAPanelSVG = pGraphics->LoadSVG(DUALNAM_CHANNEL_A_PANEL_FN);
+    const auto dualnamChannelBPanelSVG = pGraphics->LoadSVG(DUALNAM_CHANNEL_B_PANEL_FN);
+    const auto dualnamSelectorBarSVG = pGraphics->LoadSVG(DUALNAM_SELECTOR_BAR_FN);
+    const auto dualnamMeterLevelSVG = pGraphics->LoadSVG(DUALNAM_METER_LEVEL_FN);
+    const auto dualnamKnobBlackSVG = pGraphics->LoadSVG(DUALNAM_KNOB_BLACK_FN);
+    const auto dualnamKnobWhiteSVG = pGraphics->LoadSVG(DUALNAM_KNOB_WHITE_FN);
+    const auto dualnamSwitchOnSVG = pGraphics->LoadSVG(DUALNAM_SWITCH_ON_FN);
+    const auto dualnamSwitchOffSVG = pGraphics->LoadSVG(DUALNAM_SWITCH_OFF_FN);
+    const auto dualnamArrowSVG = pGraphics->LoadSVG(DUALNAM_ARROW_FN);
+    const auto dualnamCrossSVG = pGraphics->LoadSVG(DUALNAM_CROSS_FN);
 
     const auto backgroundBitmap = pGraphics->LoadBitmap(BACKGROUND_FN);
     const auto fileBackgroundBitmap = pGraphics->LoadBitmap(FILEBACKGROUND_FN);
@@ -144,14 +154,7 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     const auto switchHandleBitmap = pGraphics->LoadBitmap(SLIDESWITCHHANDLE_FN);
 
     const auto b = pGraphics->GetBounds();
-    const IColor editorBaseColor(255, 0, 0, 0);
-    const IColor stripColor(255, 48, 48, 48);
-    const IColor channelAPanelColor(255, 225, 225, 225);
-    const IColor channelBPanelColor(255, 225, 0, 0);
-    pGraphics->AttachControl(new ILambdaControl(
-      b, [editorBaseColor](ILambdaControl*, IGraphics& graphics, IRECT& rect) {
-        graphics.FillRect(editorBaseColor, rect);
-      }, DEFAULT_ANIMATION_DURATION, false, false, kNoParameter, true));
+    pGraphics->AttachControl(new ISVGControl(b, dualnamBoardSVG));
 
     // Model loader button
     auto makeLoadModelCompletionHandler = [&](const dualnam::ModelSlot slot) {
@@ -202,6 +205,9 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
       const auto globalInputArea = IRECT(24.0f, 18.0f, 56.0f, 58.0f);
       const auto gateThresholdArea = IRECT(130.667f, 18.0f, 162.667f, 58.0f);
       const auto globalOutputArea = IRECT(192.0f, 18.0f, 224.0f, 58.0f);
+      const auto globalInputKnobArea = IRECT(24.0f, 18.0f, 56.0f, 50.0f);
+      const auto gateThresholdKnobArea = IRECT(130.667f, 18.0f, 162.667f, 50.0f);
+      const auto globalOutputKnobArea = IRECT(192.0f, 18.0f, 224.0f, 50.0f);
       const auto labelHeight = 10.0f;
       const auto globalInputLabelArea =
         IRECT(globalInputArea.L, stripBounds.T + 2.0f, globalInputArea.R, stripBounds.T + labelHeight);
@@ -216,29 +222,15 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
           .WithDrawFrame(false)
           .WithDrawShadows(false)
           .WithValueText(IText(7.0f, COLOR_WHITE, "Inter-SemiBold", EAlign::Center, EVAlign::Middle));
-      const auto globalKnobStyle =
-        DEFAULT_STYLE.WithShowLabel(false)
-          .WithShowValue(true)
-          .WithDrawFrame(false)
-          .WithDrawShadows(false)
-          .WithColor(kFR, COLOR_TRANSPARENT)
-          .WithWidgetFrac(1.0f)
-          .WithValueText(IText(7.0f, COLOR_WHITE, "Inter-Regular", EAlign::Center, EVAlign::Bottom));
-
-      pGraphics->AttachControl(new ILambdaControl(
-        stripBounds, [stripColor](ILambdaControl*, IGraphics& graphics, IRECT& rect) {
-          graphics.FillRoundRect(stripColor, rect, 25.0f);
-        }, DEFAULT_ANIMATION_DURATION, false, false, kNoParameter, true));
+      pGraphics->AttachControl(new ISVGControl(stripBounds, dualnamGlobalStripSVG));
       pGraphics->AttachControl(new IVLabelControl(globalInputLabelArea, "IN", globalLabelStyle));
       pGraphics->AttachControl(new IVLabelControl(gateThresholdLabelArea, "GATE", globalLabelStyle));
       pGraphics->AttachControl(new IVLabelControl(globalOutputLabelArea, "OUT", globalLabelStyle));
+      pGraphics->AttachControl(new ISVGKnobControl(globalInputKnobArea, dualnamKnobBlackSVG, kInputLevel));
+      pGraphics->AttachControl(new ISVGKnobControl(gateThresholdKnobArea, dualnamKnobBlackSVG, kNoiseGateThreshold));
+      pGraphics->AttachControl(new ISVGKnobControl(globalOutputKnobArea, dualnamKnobBlackSVG, kOutputLevel));
       pGraphics->AttachControl(
-        new DualNAMVectorKnob(globalInputArea, kInputLevel, "", globalKnobStyle, COLOR_BLACK, COLOR_WHITE, 1.0f));
-      pGraphics->AttachControl(new DualNAMVectorKnob(gateThresholdArea, kNoiseGateThreshold, "", globalKnobStyle,
-                                                     COLOR_BLACK, COLOR_WHITE, 1.0f));
-      pGraphics->AttachControl(
-        new DualNAMVectorKnob(globalOutputArea, kOutputLevel, "", globalKnobStyle, COLOR_BLACK, COLOR_WHITE, 1.0f));
-      pGraphics->AttachControl(new DualNAMVectorSwitch(gateToggleArea, kNoiseGateActive, "", style, true));
+        new DualNAMSVGSwitchControl(gateToggleArea, kNoiseGateActive, dualnamSwitchOffSVG, dualnamSwitchOnSVG));
     };
 
     auto attachChannelPanel = [&](const IRECT& panelBounds, const char* channelTitle, const dualnam::ModelSlot modelSlot,
@@ -246,9 +238,8 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
                                   const int clearModelMessage, const char* defaultModelString, const int inputMeterTag,
                                   const int outputMeterTag, const int eqActiveParam, const int bassParam,
                                   const int midParam, const int trebleParam, const char* eqGroup,
-                                  const bool sharedControlsActive, const IColor panelColor, const IColor knobColor,
-                                  const IColor knobIndicatorColor, const IColor panelTextColor,
-                                  const bool firstKnobUsesPanelColor = false) {
+                                  const bool sharedControlsActive, const ISVG& panelSVG, const ISVG& knobSVG,
+                                  const IColor panelTextColor) {
       const auto titleArea = IRECT(panelBounds.L + 100.0f, 107.0f, panelBounds.R - 100.0f, 153.0f);
       const auto knobTop = 181.0f;
       const auto knobSize = 64.0f;
@@ -277,57 +268,38 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
           .WithValueText(IText(30.0f, panelTextColor, "Inter-SemiBold", EAlign::Center, EVAlign::Middle))
           .WithDrawShadows(false)
           .WithDrawFrame(false);
-      const auto channelKnobStyle =
-        style.WithDrawFrame(false)
-          .WithDrawShadows(false)
-          .WithShowLabel(false)
-          .WithShowValue(false)
-          .WithColor(kFR, COLOR_TRANSPARENT)
-          .WithLabelText(IText(21.0f, panelTextColor, "Inter-SemiBold"))
-          .WithValueText(IText(14.0f, panelTextColor, "Inter-SemiBold", EAlign::Center, EVAlign::Bottom));
-
-      pGraphics->AttachControl(new ILambdaControl(
-        panelBounds, [panelColor](ILambdaControl*, IGraphics& graphics, IRECT& rect) {
-          graphics.FillRoundRect(panelColor, rect, 25.0f);
-        }, DEFAULT_ANIMATION_DURATION, false, false, kNoParameter, true));
+      pGraphics->AttachControl(new ISVGControl(panelBounds, panelSVG));
       pGraphics->AttachControl(new IVLabelControl(titleArea, channelTitle, channelTitleStyle));
 
       pGraphics->AttachControl(
         new NAMFileBrowserControl(modelArea, clearModelMessage, defaultModelString, "nam",
-                                  makeLoadModelCompletionHandler(modelSlot), style, fileSVG, crossSVG, leftArrowSVG,
-                                  rightArrowSVG, fileBackgroundBitmap, globeSVG, "Get NAM Models", getUrl, true),
+                                  makeLoadModelCompletionHandler(modelSlot), style, fileSVG, dualnamCrossSVG,
+                                  dualnamArrowSVG, dualnamArrowSVG, fileBackgroundBitmap, globeSVG,
+                                  dualnamSelectorBarSVG, "Get NAM Models", getUrl, true),
         modelBrowserTag);
 
       auto* irBrowser =
         new NAMFileBrowserControl(irArea, kMsgTagClearIR, defaultIRString.c_str(), "wav", loadIRCompletionHandler, style,
-                                  fileSVG, crossSVG, leftArrowSVG, rightArrowSVG, fileBackgroundBitmap, globeSVG,
-                                  "Get IRs", getUrl, true);
+                                  fileSVG, dualnamCrossSVG, dualnamArrowSVG, dualnamArrowSVG, fileBackgroundBitmap,
+                                  globeSVG, dualnamSelectorBarSVG, "Get IRs", getUrl, true);
       pGraphics->AttachControl(irBrowser, sharedControlsActive ? kCtrlTagIRFileBrowser : -1);
 
-      const auto eqSwitchStyle = style.WithLabelText(IText(13.0f, panelTextColor, "Inter-SemiBold"));
-      auto* eqSwitch = new DualNAMVectorSwitch(eqToggleArea, eqActiveParam, "", eqSwitchStyle);
+      auto* eqSwitch =
+        new DualNAMSVGSwitchControl(eqToggleArea, eqActiveParam, dualnamSwitchOffSVG, dualnamSwitchOnSVG, true);
       pGraphics->AttachControl(eqSwitch);
 
-      const IColor inputKnobColor = firstKnobUsesPanelColor ? COLOR_WHITE : knobColor;
-      const IColor inputIndicatorColor = firstKnobUsesPanelColor ? COLOR_BLACK : knobIndicatorColor;
-      pGraphics->AttachControl(
-        new DualNAMVectorKnob(inputKnobArea, modelInputParam, "", channelKnobStyle, inputKnobColor,
-                              inputIndicatorColor));
-      auto* bassKnob =
-        new DualNAMVectorKnob(bassKnobArea, bassParam, "", channelKnobStyle, knobColor, knobIndicatorColor);
-      auto* midKnob =
-        new DualNAMVectorKnob(midKnobArea, midParam, "", channelKnobStyle, knobColor, knobIndicatorColor);
-      auto* trebleKnob =
-        new DualNAMVectorKnob(trebleKnobArea, trebleParam, "", channelKnobStyle, knobColor, knobIndicatorColor);
-      auto* outputKnob = new DualNAMVectorKnob(outputKnobArea, modelOutputParam, "", channelKnobStyle, knobColor,
-                                               knobIndicatorColor);
+      pGraphics->AttachControl(new ISVGKnobControl(inputKnobArea.GetFromTop(knobSize), knobSVG, modelInputParam));
+      auto* bassKnob = new ISVGKnobControl(bassKnobArea.GetFromTop(knobSize), knobSVG, bassParam);
+      auto* midKnob = new ISVGKnobControl(midKnobArea.GetFromTop(knobSize), knobSVG, midParam);
+      auto* trebleKnob = new ISVGKnobControl(trebleKnobArea.GetFromTop(knobSize), knobSVG, trebleParam);
+      auto* outputKnob = new ISVGKnobControl(outputKnobArea.GetFromTop(knobSize), knobSVG, modelOutputParam);
       pGraphics->AttachControl(bassKnob, -1, eqGroup);
       pGraphics->AttachControl(midKnob, -1, eqGroup);
       pGraphics->AttachControl(trebleKnob, -1, eqGroup);
       pGraphics->AttachControl(outputKnob);
 
-      auto* inputMeter = new DualNAMSegmentMeterControl(inputMeterArea);
-      auto* outputMeter = new DualNAMSegmentMeterControl(outputMeterArea);
+      auto* inputMeter = new DualNAMSVGMeterControl(inputMeterArea, dualnamMeterLevelSVG);
+      auto* outputMeter = new DualNAMSVGMeterControl(outputMeterArea, dualnamMeterLevelSVG);
       pGraphics->AttachControl(inputMeter, inputMeterTag);
       pGraphics->AttachControl(outputMeter, outputMeterTag);
 
@@ -345,16 +317,12 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     attachChannelPanel(channelAPanel, "CHANNEL A", dualnam::ModelSlot::A, kModelAInputLevel, kModelAOutputLevel,
                        kCtrlTagModelAFileBrowser, kMsgTagClearModelA, defaultNamAFileString.c_str(),
                        kCtrlTagInputMeterA, kCtrlTagOutputMeterA, kModelAEQActive, kModelABass, kModelAMid,
-                       kModelATreble, "EQ_A_KNOBS", true, channelAPanelColor, COLOR_BLACK, COLOR_WHITE, COLOR_BLACK);
+                       kModelATreble, "EQ_A_KNOBS", true, dualnamChannelAPanelSVG, dualnamKnobBlackSVG, COLOR_BLACK);
     attachChannelPanel(channelBPanel, "CHANNEL B", dualnam::ModelSlot::B, kModelBInputLevel, kModelBOutputLevel,
                        kCtrlTagModelBFileBrowser, kMsgTagClearModelB, defaultNamBFileString.c_str(),
                        kCtrlTagInputMeterB, kCtrlTagOutputMeterB, kModelBEQActive, kModelBBass, kModelBMid,
-                       kModelBTreble, "EQ_B_KNOBS", false, channelBPanelColor, COLOR_BLACK, COLOR_WHITE, COLOR_BLACK,
-                       true);
-    pGraphics->AttachControl(new ILambdaControl(
-      mixerStrip, [stripColor](ILambdaControl*, IGraphics& graphics, IRECT& rect) {
-        graphics.FillRoundRect(stripColor, rect, 25.0f);
-      }, DEFAULT_ANIMATION_DURATION, false, false, kNoParameter, true));
+                       kModelBTreble, "EQ_B_KNOBS", false, dualnamChannelBPanelSVG, dualnamKnobWhiteSVG, COLOR_WHITE);
+    pGraphics->AttachControl(new ISVGControl(mixerStrip, dualnamGlobalStripSVG));
 
     // Hidden compatibility container for model metadata/calibration controls used by load-state code.
     pGraphics

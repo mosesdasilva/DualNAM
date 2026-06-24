@@ -194,6 +194,57 @@ private:
   bool mVertical;
 };
 
+class DualNAMSVGSwitchControl : public ISwitchControlBase
+{
+public:
+  DualNAMSVGSwitchControl(const IRECT& bounds, int paramIdx, const ISVG& offSVG, const ISVG& onSVG,
+                          bool horizontal = false)
+  : ISwitchControlBase(bounds, paramIdx)
+  , mOffSVG(offSVG)
+  , mOnSVG(onSVG)
+  , mHorizontal(horizontal)
+  {
+  }
+
+  void Draw(IGraphics& g) override
+  {
+    const ISVG& svg = GetSelectedIdx() > 0 ? mOnSVG : mOffSVG;
+
+    if (mHorizontal)
+      g.DrawRotatedSVG(svg, mRECT.MW(), mRECT.MH(), mRECT.H(), mRECT.W(), 90.0, &mBlend);
+    else
+      g.DrawSVG(svg, mRECT, &mBlend);
+  }
+
+private:
+  ISVG mOffSVG;
+  ISVG mOnSVG;
+  bool mHorizontal;
+};
+
+class NAMRotatedSquareButtonControl : public NAMSquareButtonControl
+{
+public:
+  NAMRotatedSquareButtonControl(const IRECT& bounds, IActionFunction af, const ISVG& svg, const float rotationDegrees)
+  : NAMSquareButtonControl(bounds, af, svg)
+  , mSVG(svg)
+  , mRotationDegrees(rotationDegrees)
+  {
+  }
+
+  void Draw(IGraphics& g) override
+  {
+    if (mMouseIsOver)
+      g.FillRoundRect(PluginColors::MOUSEOVER, mRECT, 2.f);
+
+    g.DrawRotatedSVG(mSVG, mRECT.MW(), mRECT.MH(), mRECT.W(), mRECT.H(), mRotationDegrees, &mBlend);
+  }
+
+private:
+  ISVG mSVG;
+  float mRotationDegrees;
+};
+
 class DualNAMSettingsButtonControl : public IControl
 {
 public:
@@ -369,8 +420,8 @@ public:
   NAMFileBrowserControl(const IRECT& bounds, int clearMsgTag, const char* labelStr, const char* fileExtension,
                         IFileDialogCompletionHandlerFunc ch, const IVStyle& style, const ISVG& loadSVG,
                         const ISVG& clearSVG, const ISVG& leftSVG, const ISVG& rightSVG, const IBitmap& bitmap,
-                        const ISVG& globeSVG, const char* getButtonLabel, const char* getButtonURL,
-                        bool compactBlackBar = false)
+                        const ISVG& globeSVG, const ISVG& selectorBarSVG, const char* getButtonLabel,
+                        const char* getButtonURL, bool compactBlackBar = false)
   : IDirBrowseControlBase(bounds, fileExtension, false, false)
   , mClearMsgTag(clearMsgTag)
   , mDefaultLabelStr(labelStr)
@@ -386,6 +437,7 @@ public:
   , mLeftSVG(leftSVG)
   , mRightSVG(rightSVG)
   , mGlobeSVG(globeSVG)
+  , mSelectorBarSVG(selectorBarSVG)
   , mGetButtonLabel(getButtonLabel)
   , mGetButtonURL(getButtonURL)
   , mCompactBlackBar(compactBlackBar)
@@ -397,7 +449,7 @@ public:
   void Draw(IGraphics& g) override
   {
     if (mCompactBlackBar)
-      g.FillRoundRect(COLOR_BLACK, mRECT, 25.0f);
+      g.DrawSVG(mSelectorBarSVG, mRECT, &mBlend);
     else
       g.DrawFittedBitmap(mBitmap, mRECT);
   }
@@ -510,9 +562,9 @@ public:
       AddChildControl(new NAMSquareButtonControl(loadFileButtonBounds, DefaultClickActionFunc, mLoadSVG))
         ->SetAnimationEndActionFunction(loadFileFunc);
     }
-    AddChildControl(new NAMSquareButtonControl(leftButtonBounds, DefaultClickActionFunc, mLeftSVG))
+    AddChildControl(new NAMRotatedSquareButtonControl(leftButtonBounds, DefaultClickActionFunc, mLeftSVG, 180.0f))
       ->SetAnimationEndActionFunction(prevFileFunc);
-    AddChildControl(new NAMSquareButtonControl(rightButtonBounds, DefaultClickActionFunc, mRightSVG))
+    AddChildControl(new NAMRotatedSquareButtonControl(rightButtonBounds, DefaultClickActionFunc, mRightSVG, 0.0f))
       ->SetAnimationEndActionFunction(nextFileFunc);
     AddChildControl(mFileNameControl = new NAMFileNameControl(fileNameButtonBounds, mDefaultLabelStr.Get(), mStyle))
       ->SetAnimationEndActionFunction(chooseFileFunc);
@@ -610,7 +662,7 @@ private:
   NAMFileNameControl* mFileNameControl = nullptr;
   IVStyle mStyle;
   IBitmap mBitmap;
-  ISVG mLoadSVG, mClearSVG, mLeftSVG, mRightSVG, mGlobeSVG;
+  ISVG mLoadSVG, mClearSVG, mLeftSVG, mRightSVG, mGlobeSVG, mSelectorBarSVG;
   int mClearMsgTag;
   bool mCompactBlackBar;
 
@@ -713,6 +765,52 @@ public:
   }
 
 private:
+  float mLevel = 0.0f;
+};
+
+class DualNAMSVGMeterControl : public IControl
+{
+  static constexpr float KMeterMin = -70.0f;
+  static constexpr float KMeterMax = -0.01f;
+
+public:
+  DualNAMSVGMeterControl(const IRECT& bounds, const ISVG& meterSVG)
+  : IControl(bounds)
+  , mMeterSVG(meterSVG)
+  {
+  }
+
+  void Draw(IGraphics& g) override
+  {
+    g.DrawSVG(mMeterSVG, mRECT, &mBlend);
+
+    if (mLevel >= 0.999f)
+      return;
+
+    const float inactiveBottom = mRECT.B - (mRECT.H() * mLevel);
+    if (inactiveBottom <= mRECT.T)
+      return;
+
+    g.FillRoundRect(COLOR_BLACK, IRECT(mRECT.L, mRECT.T, mRECT.R, inactiveBottom), 15.0f, &mBlend);
+  }
+
+  void OnMsgFromDelegate(int msgTag, int dataSize, const void* pData) override
+  {
+    if (IsDisabled() || msgTag != ISender<>::kUpdateMessage)
+      return;
+
+    IByteStream stream(pData, dataSize);
+    ISenderData<1, std::pair<float, float>> data;
+    stream.Get(&data, 0);
+
+    const double peakDb = AmpToDB(static_cast<double>(std::get<0>(data.vals[0])));
+    const double rangeDb = std::fabs(KMeterMax - KMeterMin);
+    mLevel = static_cast<float>(Clip((peakDb + std::fabs(KMeterMin)) / rangeDb, 0.0, 1.0));
+    SetDirty(false);
+  }
+
+private:
+  ISVG mMeterSVG;
   float mLevel = 0.0f;
 };
 
