@@ -662,6 +662,60 @@ public:
   }
 };
 
+class DualNAMSegmentMeterControl : public IControl
+{
+  static constexpr float KMeterMin = -70.0f;
+  static constexpr float KMeterMax = -0.01f;
+  static constexpr int KSegmentCount = 28;
+  static constexpr float KSegmentWidth = 24.0f;
+  static constexpr float KSegmentHeight = 7.0f;
+  static constexpr float KSegmentGap = 1.0f;
+
+public:
+  DualNAMSegmentMeterControl(const IRECT& bounds)
+  : IControl(bounds)
+  {
+  }
+
+  void Draw(IGraphics& g) override
+  {
+    const auto trackBounds = mRECT.GetCentredInside(30.0f, 240.0f);
+    const auto segmentArea = trackBounds.GetCentredInside(KSegmentWidth, 224.0f);
+    const int activeSegments = static_cast<int>(std::ceil(mLevel * static_cast<float>(KSegmentCount)));
+
+    g.FillRoundRect(COLOR_BLACK, trackBounds, 15.0f, &mBlend);
+
+    for (int segment = 0; segment < KSegmentCount; ++segment)
+    {
+      if (segment >= activeSegments)
+        continue;
+
+      const float bottom = segmentArea.B - (static_cast<float>(segment) * (KSegmentHeight + KSegmentGap));
+      const auto segmentBounds =
+        IRECT(segmentArea.L, bottom - KSegmentHeight, segmentArea.R, bottom);
+      g.FillRoundRect(IColor(255, 0, 255, 0), segmentBounds, 3.5f, &mBlend);
+    }
+  }
+
+  void OnMsgFromDelegate(int msgTag, int dataSize, const void* pData) override
+  {
+    if (IsDisabled() || msgTag != ISender<>::kUpdateMessage)
+      return;
+
+    IByteStream stream(pData, dataSize);
+    ISenderData<1, std::pair<float, float>> data;
+    stream.Get(&data, 0);
+
+    const double peakDb = AmpToDB(static_cast<double>(std::get<0>(data.vals[0])));
+    const double rangeDb = std::fabs(KMeterMax - KMeterMin);
+    mLevel = static_cast<float>(Clip((peakDb + std::fabs(KMeterMin)) / rangeDb, 0.0, 1.0));
+    SetDirty(false);
+  }
+
+private:
+  float mLevel = 0.0f;
+};
+
 // Container where we can refer to children by names instead of indices
 class IContainerBaseWithNamedChildren : public IContainerBase
 {
