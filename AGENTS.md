@@ -78,6 +78,9 @@ code generation.
 - Make commits small, coherent, and safe to revert. Do not commit unless asked.
 - Do not hide incomplete work behind silent fallback behavior, broad exception
   handling, or vague TODO comments.
+- Never prefix branch names with `codex/`.
+- Name branches as `<type-of-work>/<short-description>`, for example
+  `gui/vector-global-strip` or `fix/model-slot-state`.
 
 ## TDD: red, green, refactor
 
@@ -168,6 +171,18 @@ universal bundles, and runs Apple's AU validator.
 
 A passing suite reduces risk; it does not prove correctness. If a required
 check cannot run, state the exact blocker and the behavior left unverified.
+
+## Visual inspection ownership
+
+- The product owner performs all visual inspection of the plug-in GUI.
+- The agent must not open, inspect, capture, screenshot, or judge the rendered
+  plug-in interface unless the product owner explicitly requests an exception.
+- For GUI changes, the agent may verify source-level layout assertions,
+  compilation, bundle integrity, plug-in validation, and non-visual behavior.
+- Report visual appearance, alignment, spacing, typography, color, and usability
+  as not verified until the product owner provides their manual assessment.
+- Do not treat a successful build or automated layout check as evidence that a
+  GUI looks correct.
 
 ## Code design for agent readability
 
