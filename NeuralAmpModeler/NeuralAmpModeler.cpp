@@ -140,7 +140,8 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     const auto dualnamChannelAPanelSVG = pGraphics->LoadSVG(DUALNAM_CHANNEL_A_PANEL_FN);
     const auto dualnamChannelBPanelSVG = pGraphics->LoadSVG(DUALNAM_CHANNEL_B_PANEL_FN);
     const auto dualnamSelectorBarSVG = pGraphics->LoadSVG(DUALNAM_SELECTOR_BAR_FN);
-    const auto dualnamMeterLevelSVG = pGraphics->LoadSVG(DUALNAM_METER_LEVEL_FN);
+    const auto dualnamMeterTrackSVG = pGraphics->LoadSVG(DUALNAM_METER_TRACK_FN);
+    const auto dualnamMeterSegmentSVG = pGraphics->LoadSVG(DUALNAM_METER_SEGMENT_FN);
     const auto dualnamKnobBlackSVG = pGraphics->LoadSVG(DUALNAM_KNOB_BLACK_FN);
     const auto dualnamKnobWhiteSVG = pGraphics->LoadSVG(DUALNAM_KNOB_WHITE_FN);
     const auto dualnamSwitchOnSVG = pGraphics->LoadSVG(DUALNAM_SWITCH_ON_FN);
@@ -202,33 +203,34 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     const char* const getUrl = "https://www.neuralampmodeler.com/users#comp-marb84o5";
 
     auto attachGlobalStrip = [&](const IRECT& stripBounds) {
-      const auto globalInputArea = IRECT(24.0f, 18.0f, 56.0f, 58.0f);
-      const auto gateThresholdArea = IRECT(130.667f, 18.0f, 162.667f, 58.0f);
-      const auto globalOutputArea = IRECT(192.0f, 18.0f, 224.0f, 58.0f);
-      const auto globalInputKnobArea = IRECT(24.0f, 18.0f, 56.0f, 50.0f);
-      const auto gateThresholdKnobArea = IRECT(130.667f, 18.0f, 162.667f, 50.0f);
-      const auto globalOutputKnobArea = IRECT(192.0f, 18.0f, 224.0f, 50.0f);
-      const auto labelHeight = 10.0f;
-      const auto globalInputLabelArea =
-        IRECT(globalInputArea.L, stripBounds.T + 2.0f, globalInputArea.R, stripBounds.T + labelHeight);
-      const auto gateThresholdLabelArea =
-        IRECT(gateThresholdArea.L, stripBounds.T + 2.0f, gateThresholdArea.R, stripBounds.T + labelHeight);
-      const auto globalOutputLabelArea =
-        IRECT(globalOutputArea.L, stripBounds.T + 2.0f, globalOutputArea.R, stripBounds.T + labelHeight);
+      const auto globalInputArea = IRECT(18.0f, 13.0f, 62.0f, 68.0f);
+      const auto gateThresholdArea = IRECT(124.667f, 13.0f, 168.667f, 68.0f);
+      const auto globalOutputArea = IRECT(186.0f, 13.0f, 230.0f, 68.0f);
+      const auto globalInputKnobArea = IRECT(24.0f, 24.0f, 56.0f, 56.0f);
+      const auto gateThresholdKnobArea = IRECT(130.667f, 24.0f, 162.667f, 56.0f);
+      const auto globalOutputKnobArea = IRECT(192.0f, 24.0f, 224.0f, 56.0f);
+      const auto globalInputLabelArea = IRECT(globalInputArea.L, 13.0f, globalInputArea.R, 22.0f);
+      const auto gateThresholdLabelArea = IRECT(gateThresholdArea.L, 13.0f, gateThresholdArea.R, 22.0f);
+      const auto globalOutputLabelArea = IRECT(globalOutputArea.L, 13.0f, globalOutputArea.R, 22.0f);
+      const auto globalInputValueArea = IRECT(globalInputArea.L, 58.0f, globalInputArea.R, 68.0f);
+      const auto gateThresholdValueArea = IRECT(gateThresholdArea.L, 58.0f, gateThresholdArea.R, 68.0f);
+      const auto globalOutputValueArea = IRECT(globalOutputArea.L, 58.0f, globalOutputArea.R, 68.0f);
       const auto gateToggleArea = IRECT(85.333f, 23.0f, 101.333f, 55.0f);
-      const auto globalLabelStyle =
-        DEFAULT_STYLE.WithShowLabel(false)
-          .WithShowValue(false)
-          .WithDrawFrame(false)
-          .WithDrawShadows(false)
-          .WithValueText(IText(7.0f, COLOR_WHITE, "Inter-SemiBold", EAlign::Center, EVAlign::Middle));
+      const auto globalLabelText = IText(7.0f, COLOR_WHITE, "Inter-SemiBold", EAlign::Center, EVAlign::Middle);
+      const auto globalValueText = IText(7.0f, COLOR_WHITE, "Inter-SemiBold", EAlign::Center, EVAlign::Middle);
       pGraphics->AttachControl(new ISVGControl(stripBounds, dualnamGlobalStripSVG));
-      pGraphics->AttachControl(new IVLabelControl(globalInputLabelArea, "IN", globalLabelStyle));
-      pGraphics->AttachControl(new IVLabelControl(gateThresholdLabelArea, "GATE", globalLabelStyle));
-      pGraphics->AttachControl(new IVLabelControl(globalOutputLabelArea, "OUT", globalLabelStyle));
-      pGraphics->AttachControl(new ISVGKnobControl(globalInputKnobArea, dualnamKnobBlackSVG, kInputLevel));
-      pGraphics->AttachControl(new ISVGKnobControl(gateThresholdKnobArea, dualnamKnobBlackSVG, kNoiseGateThreshold));
-      pGraphics->AttachControl(new ISVGKnobControl(globalOutputKnobArea, dualnamKnobBlackSVG, kOutputLevel));
+      pGraphics->AttachControl(new DualNAMLabeledSVGKnobControl(globalInputArea, globalInputKnobArea,
+                                                                dualnamKnobWhiteSVG, kInputLevel, "IN",
+                                                                globalLabelText, globalValueText,
+                                                                globalInputLabelArea, globalInputValueArea));
+      pGraphics->AttachControl(new DualNAMLabeledSVGKnobControl(gateThresholdArea, gateThresholdKnobArea,
+                                                                dualnamKnobWhiteSVG, kNoiseGateThreshold, "GATE",
+                                                                globalLabelText, globalValueText,
+                                                                gateThresholdLabelArea, gateThresholdValueArea));
+      pGraphics->AttachControl(new DualNAMLabeledSVGKnobControl(globalOutputArea, globalOutputKnobArea,
+                                                                dualnamKnobWhiteSVG, kOutputLevel, "OUT",
+                                                                globalLabelText, globalValueText,
+                                                                globalOutputLabelArea, globalOutputValueArea));
       pGraphics->AttachControl(
         new DualNAMSVGSwitchControl(gateToggleArea, kNoiseGateActive, dualnamSwitchOffSVG, dualnamSwitchOnSVG));
     };
@@ -241,17 +243,11 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
                                   const bool sharedControlsActive, const ISVG& panelSVG, const ISVG& knobSVG,
                                   const IColor panelTextColor) {
       const auto titleArea = IRECT(panelBounds.L + 100.0f, 107.0f, panelBounds.R - 100.0f, 153.0f);
-      const auto knobTop = 181.0f;
+      const auto knobLabelTop = 162.0f;
+      const auto knobTop = 188.0f;
+      const auto knobValueTop = 255.0f;
       const auto knobSize = 64.0f;
       const auto knobControlHeight = 104.0f;
-      const auto firstKnobLeft = panelBounds.L + 57.0f;
-      const auto knobSpacing = 99.0f;
-      const auto inputKnobArea =
-        IRECT(firstKnobLeft, knobTop, firstKnobLeft + knobSize, knobTop + knobControlHeight);
-      const auto bassKnobArea = inputKnobArea.GetHShifted(knobSpacing);
-      const auto midKnobArea = inputKnobArea.GetHShifted(knobSpacing * 2.0f);
-      const auto trebleKnobArea = inputKnobArea.GetHShifted(knobSpacing * 3.0f);
-      const auto outputKnobArea = inputKnobArea.GetHShifted(knobSpacing * 4.0f);
       const auto eqToggleArea = IRECT(panelBounds.L + 260.0f, 307.0f, panelBounds.L + 324.0f, 339.0f);
 
       const auto fileHeight = 30.0f;
@@ -261,6 +257,15 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
       const auto irArea = IRECT(selectorLeft, 400.0f, selectorRight, 400.0f + fileHeight);
       const auto inputMeterArea = IRECT(panelBounds.L + 10.0f, 107.0f, panelBounds.L + 40.0f, 347.0f);
       const auto outputMeterArea = IRECT(panelBounds.R - 40.0f, 107.0f, panelBounds.R - 10.0f, 347.0f);
+      const auto knobGap = ((outputMeterArea.L - inputMeterArea.R) - (knobSize * 5.0f)) / 6.0f;
+      const auto firstKnobLeft = inputMeterArea.R + knobGap;
+      const auto knobSpacing = knobSize + knobGap;
+      const auto inputKnobArea =
+        IRECT(firstKnobLeft, knobLabelTop, firstKnobLeft + knobSize, knobLabelTop + knobControlHeight);
+      const auto bassKnobArea = inputKnobArea.GetHShifted(knobSpacing);
+      const auto midKnobArea = inputKnobArea.GetHShifted(knobSpacing * 2.0f);
+      const auto trebleKnobArea = inputKnobArea.GetHShifted(knobSpacing * 3.0f);
+      const auto outputKnobArea = inputKnobArea.GetHShifted(knobSpacing * 4.0f);
 
       const auto channelTitleStyle =
         DEFAULT_STYLE.WithShowLabel(false)
@@ -268,6 +273,10 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
           .WithValueText(IText(30.0f, panelTextColor, "Inter-SemiBold", EAlign::Center, EVAlign::Middle))
           .WithDrawShadows(false)
           .WithDrawFrame(false);
+      const auto channelKnobLabelText =
+        IText(12.0f, panelTextColor, "Inter-SemiBold", EAlign::Center, EVAlign::Middle);
+      const auto channelKnobValueText =
+        IText(11.0f, panelTextColor, "Inter-SemiBold", EAlign::Center, EVAlign::Middle);
       pGraphics->AttachControl(new ISVGControl(panelBounds, panelSVG));
       pGraphics->AttachControl(new IVLabelControl(titleArea, channelTitle, channelTitleStyle));
 
@@ -288,18 +297,26 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
         new DualNAMSVGSwitchControl(eqToggleArea, eqActiveParam, dualnamSwitchOffSVG, dualnamSwitchOnSVG, true);
       pGraphics->AttachControl(eqSwitch);
 
-      pGraphics->AttachControl(new ISVGKnobControl(inputKnobArea.GetFromTop(knobSize), knobSVG, modelInputParam));
-      auto* bassKnob = new ISVGKnobControl(bassKnobArea.GetFromTop(knobSize), knobSVG, bassParam);
-      auto* midKnob = new ISVGKnobControl(midKnobArea.GetFromTop(knobSize), knobSVG, midParam);
-      auto* trebleKnob = new ISVGKnobControl(trebleKnobArea.GetFromTop(knobSize), knobSVG, trebleParam);
-      auto* outputKnob = new ISVGKnobControl(outputKnobArea.GetFromTop(knobSize), knobSVG, modelOutputParam);
+      auto makeChannelKnob = [&](const IRECT& controlArea, const int paramIdx, const char* label) {
+        const auto labelArea = IRECT(controlArea.L, knobLabelTop, controlArea.R, knobLabelTop + 16.0f);
+        const auto knobArea = IRECT(controlArea.L, knobTop, controlArea.R, knobTop + knobSize);
+        const auto valueArea = IRECT(controlArea.L - 14.0f, knobValueTop, controlArea.R + 14.0f, knobValueTop + 18.0f);
+        return new DualNAMLabeledSVGKnobControl(controlArea, knobArea, knobSVG, paramIdx, label, channelKnobLabelText,
+                                                channelKnobValueText, labelArea, valueArea);
+      };
+
+      pGraphics->AttachControl(makeChannelKnob(inputKnobArea, modelInputParam, "Input"));
+      auto* bassKnob = makeChannelKnob(bassKnobArea, bassParam, "Bass");
+      auto* midKnob = makeChannelKnob(midKnobArea, midParam, "Middle");
+      auto* trebleKnob = makeChannelKnob(trebleKnobArea, trebleParam, "Treble");
+      auto* outputKnob = makeChannelKnob(outputKnobArea, modelOutputParam, "Output");
       pGraphics->AttachControl(bassKnob, -1, eqGroup);
       pGraphics->AttachControl(midKnob, -1, eqGroup);
       pGraphics->AttachControl(trebleKnob, -1, eqGroup);
       pGraphics->AttachControl(outputKnob);
 
-      auto* inputMeter = new DualNAMSVGMeterControl(inputMeterArea, dualnamMeterLevelSVG);
-      auto* outputMeter = new DualNAMSVGMeterControl(outputMeterArea, dualnamMeterLevelSVG);
+      auto* inputMeter = new DualNAMSVGMeterControl(inputMeterArea, dualnamMeterTrackSVG, dualnamMeterSegmentSVG);
+      auto* outputMeter = new DualNAMSVGMeterControl(outputMeterArea, dualnamMeterTrackSVG, dualnamMeterSegmentSVG);
       pGraphics->AttachControl(inputMeter, inputMeterTag);
       pGraphics->AttachControl(outputMeter, outputMeterTag);
 

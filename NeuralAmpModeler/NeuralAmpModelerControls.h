@@ -194,6 +194,55 @@ private:
   bool mVertical;
 };
 
+class DualNAMLabeledSVGKnobControl : public IKnobControlBase
+{
+public:
+  DualNAMLabeledSVGKnobControl(const IRECT& bounds, const IRECT& knobBounds, const ISVG& svg, const int paramIdx,
+                               const char* label, const IText& labelText, const IText& valueText,
+                               const IRECT& labelBounds, const IRECT& valueBounds)
+  : IKnobControlBase(bounds, paramIdx)
+  , mSVG(svg)
+  , mKnobBounds(knobBounds)
+  , mLabelBounds(labelBounds)
+  , mValueBounds(valueBounds)
+  , mLabelText(labelText)
+  , mValueText(valueText)
+  , mLabel(label)
+  {
+  }
+
+  void Draw(IGraphics& g) override
+  {
+    if (mLabel.GetLength())
+      g.DrawText(mLabelText, mLabel.Get(), mLabelBounds, &mBlend);
+
+    g.DrawRotatedSVG(mSVG, mKnobBounds.MW(), mKnobBounds.MH(), mKnobBounds.W(), mKnobBounds.H(),
+                     mStartAngle + static_cast<float>(GetValue()) * (mEndAngle - mStartAngle), &mBlend);
+
+    const IParam* pParam = GetParam();
+    if (pParam)
+    {
+      WDL_String display;
+      pParam->GetDisplayWithLabel(display);
+      g.DrawText(mValueText, display.Get(), mValueBounds, &mBlend);
+    }
+  }
+
+protected:
+  IRECT GetKnobDragBounds() override { return mKnobBounds; }
+
+private:
+  ISVG mSVG;
+  IRECT mKnobBounds;
+  IRECT mLabelBounds;
+  IRECT mValueBounds;
+  IText mLabelText;
+  IText mValueText;
+  WDL_String mLabel;
+  float mStartAngle = -135.0f;
+  float mEndAngle = 135.0f;
+};
+
 class DualNAMSVGSwitchControl : public ISwitchControlBase
 {
 public:
@@ -772,26 +821,33 @@ class DualNAMSVGMeterControl : public IControl
 {
   static constexpr float KMeterMin = -70.0f;
   static constexpr float KMeterMax = -0.01f;
+  static constexpr int KSegmentCount = 28;
+  static constexpr float KSegmentWidth = 24.0f;
+  static constexpr float KSegmentHeight = 7.0f;
+  static constexpr float KSegmentGap = 1.0f;
 
 public:
-  DualNAMSVGMeterControl(const IRECT& bounds, const ISVG& meterSVG)
+  DualNAMSVGMeterControl(const IRECT& bounds, const ISVG& trackSVG, const ISVG& segmentSVG)
   : IControl(bounds)
-  , mMeterSVG(meterSVG)
+  , mTrackSVG(trackSVG)
+  , mSegmentSVG(segmentSVG)
   {
   }
 
   void Draw(IGraphics& g) override
   {
-    g.DrawSVG(mMeterSVG, mRECT, &mBlend);
+    const auto trackBounds = mRECT.GetCentredInside(30.0f, 240.0f);
+    const auto segmentArea = trackBounds.GetCentredInside(KSegmentWidth, 224.0f);
+    const int activeSegments = static_cast<int>(std::ceil(mLevel * static_cast<float>(KSegmentCount)));
 
-    if (mLevel >= 0.999f)
-      return;
+    g.DrawSVG(mTrackSVG, trackBounds, &mBlend);
 
-    const float inactiveBottom = mRECT.B - (mRECT.H() * mLevel);
-    if (inactiveBottom <= mRECT.T)
-      return;
-
-    g.FillRoundRect(COLOR_BLACK, IRECT(mRECT.L, mRECT.T, mRECT.R, inactiveBottom), 15.0f, &mBlend);
+    for (int segment = 0; segment < activeSegments; ++segment)
+    {
+      const float bottom = segmentArea.B - (static_cast<float>(segment) * (KSegmentHeight + KSegmentGap));
+      const auto segmentBounds = IRECT(segmentArea.L, bottom - KSegmentHeight, segmentArea.R, bottom);
+      g.DrawSVG(mSegmentSVG, segmentBounds, &mBlend);
+    }
   }
 
   void OnMsgFromDelegate(int msgTag, int dataSize, const void* pData) override
@@ -810,7 +866,8 @@ public:
   }
 
 private:
-  ISVG mMeterSVG;
+  ISVG mTrackSVG;
+  ISVG mSegmentSVG;
   float mLevel = 0.0f;
 };
 

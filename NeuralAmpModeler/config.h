@@ -78,6 +78,8 @@
 #define DUALNAM_CHANNEL_B_PANEL_FN "DualNAM-ChannelBPanel.svg"
 #define DUALNAM_SELECTOR_BAR_FN "DualNAM-SelectorBar.svg"
 #define DUALNAM_METER_LEVEL_FN "DualNAM-MeterLevel.svg"
+#define DUALNAM_METER_TRACK_FN "DualNAM-MeterTrack.svg"
+#define DUALNAM_METER_SEGMENT_FN "DualNAM-MeterSegment.svg"
 #define DUALNAM_KNOB_BLACK_FN "DualNAM-KnobBlack.svg"
 #define DUALNAM_KNOB_WHITE_FN "DualNAM-KnobWhite.svg"
 #define DUALNAM_SWITCH_ON_FN "DualNAM-SwitchOn.svg"

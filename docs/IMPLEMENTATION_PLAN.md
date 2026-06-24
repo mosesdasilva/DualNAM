@@ -167,7 +167,9 @@ Progress:
   background. Global labels are separate controls, and the gate switch has a
   dedicated non-overlapping hit rectangle. The current GUI component surfaces
   are stored as repo SVG assets and attached as SVG-backed controls where the
-  artwork should match the exported vector mockup.
+  artwork should match the exported vector mockup. The global and channel knobs
+  are labeled SVG controls with live value text, and the meters use a black SVG
+  track plus repeated green SVG segments driven by the live meter level.
 - Remaining: another manual host save/reopen verification for the new controls.
   Replace placeholders one behavior at a time as independent IR paths are
   implemented.
