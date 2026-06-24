@@ -226,9 +226,9 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
     };
 
     auto attachGlobalStrip = [&](const IRECT& stripBounds) {
-      const auto knobWidth = 32.5f;
-      const auto knobHeight = 52.0f;
-      const auto knobTop = stripBounds.T + 8.0f;
+      const auto knobWidth = 32.0f;
+      const auto knobHeight = 55.0f;
+      const auto knobTop = stripBounds.T + 9.0f;
       const auto firstKnobLeft = stripBounds.L + 32.0f;
       const auto gateKnobLeft = stripBounds.L + 136.5f;
       const auto outputKnobLeft = stripBounds.L + 197.0f;
@@ -238,13 +238,13 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
         IRECT(gateKnobLeft, knobTop, gateKnobLeft + knobWidth, knobTop + knobHeight);
       const auto globalOutputArea =
         IRECT(outputKnobLeft, knobTop, outputKnobLeft + knobWidth, knobTop + knobHeight);
-      const auto labelHeight = 14.0f;
+      const auto labelHeight = 10.0f;
       const auto globalInputLabelArea =
-        IRECT(globalInputArea.L, stripBounds.T + 3.0f, globalInputArea.R, stripBounds.T + labelHeight);
+        IRECT(globalInputArea.L, stripBounds.T + 2.0f, globalInputArea.R, stripBounds.T + 2.0f + labelHeight);
       const auto gateThresholdLabelArea =
-        IRECT(gateThresholdArea.L, stripBounds.T + 3.0f, gateThresholdArea.R, stripBounds.T + labelHeight);
+        IRECT(gateThresholdArea.L, stripBounds.T + 2.0f, gateThresholdArea.R, stripBounds.T + 2.0f + labelHeight);
       const auto globalOutputLabelArea =
-        IRECT(globalOutputArea.L, stripBounds.T + 3.0f, globalOutputArea.R, stripBounds.T + labelHeight);
+        IRECT(globalOutputArea.L, stripBounds.T + 2.0f, globalOutputArea.R, stripBounds.T + 2.0f + labelHeight);
       const auto gateToggleArea =
         IRECT(stripBounds.L + 92.5f, stripBounds.T + 13.0f, stripBounds.L + 108.5f, stripBounds.T + 45.0f);
       const auto globalLabelStyle =
@@ -252,21 +252,23 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
           .WithShowValue(false)
           .WithDrawFrame(false)
           .WithDrawShadows(false)
-          .WithValueText(IText(10.0f, COLOR_WHITE, "Inter-SemiBold", EAlign::Center, EVAlign::Middle));
+          .WithValueText(IText(7.0f, COLOR_WHITE, "Inter-SemiBold", EAlign::Center, EVAlign::Middle));
       const auto globalKnobStyle =
         DEFAULT_STYLE.WithShowLabel(false)
-          .WithShowValue(false)
+          .WithShowValue(true)
           .WithDrawFrame(false)
           .WithDrawShadows(false)
-          .WithColor(kFR, COLOR_TRANSPARENT);
+          .WithColor(kFR, COLOR_TRANSPARENT)
+          .WithWidgetFrac(1.0f)
+          .WithValueText(IText(7.0f, COLOR_WHITE, "Inter-Regular", EAlign::Center, EVAlign::Bottom));
 
       pGraphics->AttachControl(new ILambdaControl(
         stripBounds, [globalStripColor](ILambdaControl*, IGraphics& graphics, IRECT& rect) {
           graphics.FillRoundRect(globalStripColor, rect, 25.0f);
         }, DEFAULT_ANIMATION_DURATION, false, false, kNoParameter, true));
-      pGraphics->AttachControl(new IVLabelControl(globalInputLabelArea, "INPUT", globalLabelStyle));
+      pGraphics->AttachControl(new IVLabelControl(globalInputLabelArea, "IN", globalLabelStyle));
       pGraphics->AttachControl(new IVLabelControl(gateThresholdLabelArea, "GATE", globalLabelStyle));
-      pGraphics->AttachControl(new IVLabelControl(globalOutputLabelArea, "OUTPUT", globalLabelStyle));
+      pGraphics->AttachControl(new IVLabelControl(globalOutputLabelArea, "OUT", globalLabelStyle));
       pGraphics->AttachControl(
         new DualNAMVectorKnob(globalInputArea, kInputLevel, "", globalKnobStyle, COLOR_WHITE, COLOR_BLACK, 1.0f));
       pGraphics->AttachControl(new DualNAMVectorKnob(gateThresholdArea, kNoiseGateThreshold, "", globalKnobStyle,
@@ -287,17 +289,18 @@ NeuralAmpModeler::NeuralAmpModeler(const InstanceInfo& info)
       const auto contentArea = mainArea.GetPadded(-10);
       const auto titleHeight = 50.0f;
       const auto titleArea = contentArea.GetFromTop(titleHeight);
-      const auto knobsArea = contentArea.GetFromTop(NAM_KNOB_HEIGHT)
-                               .GetReducedFromLeft(20.0f)
-                               .GetReducedFromRight(20.0f)
-                               .GetVShifted(titleHeight + 25.0f);
-      constexpr int channelKnobCount = 5;
-      const auto inputKnobArea = knobsArea.GetGridCell(0, 0, 1, channelKnobCount).GetPadded(2.0f);
-      const auto bassKnobArea = knobsArea.GetGridCell(0, 1, 1, channelKnobCount).GetPadded(2.0f);
-      const auto midKnobArea = knobsArea.GetGridCell(0, 2, 1, channelKnobCount).GetPadded(2.0f);
-      const auto trebleKnobArea = knobsArea.GetGridCell(0, 3, 1, channelKnobCount).GetPadded(2.0f);
-      const auto outputKnobArea = knobsArea.GetGridCell(0, 4, 1, channelKnobCount).GetPadded(2.0f);
-      const auto eqToggleArea = midKnobArea.GetVShifted(midKnobArea.H()).SubRectVertical(2, 0).GetReducedFromTop(10.0f);
+      const auto knobTop = 182.0f;
+      const auto knobSize = 64.0f;
+      const auto knobControlHeight = 104.0f;
+      const auto firstKnobLeft = panelBounds.L + 57.0f;
+      const auto knobSpacing = 99.0f;
+      const auto inputKnobArea =
+        IRECT(firstKnobLeft, knobTop, firstKnobLeft + knobSize, knobTop + knobControlHeight);
+      const auto bassKnobArea = inputKnobArea.GetHShifted(knobSpacing);
+      const auto midKnobArea = inputKnobArea.GetHShifted(knobSpacing * 2.0f);
+      const auto trebleKnobArea = inputKnobArea.GetHShifted(knobSpacing * 3.0f);
+      const auto outputKnobArea = inputKnobArea.GetHShifted(knobSpacing * 4.0f);
+      const auto eqToggleArea = IRECT(panelBounds.L + 260.0f, 307.0f, panelBounds.L + 324.0f, 339.0f);
 
       const auto fileHeight = 30.0f;
       const auto selectorLeft = panelBounds.L + 10.0f;
