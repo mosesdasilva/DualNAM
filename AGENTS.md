@@ -184,6 +184,31 @@ check cannot run, state the exact blocker and the behavior left unverified.
 - Do not treat a successful build or automated layout check as evidence that a
   GUI looks correct.
 
+## GUI asset workflow
+
+Use an SVG-first workflow for DualNAM front-end work.
+
+- The product owner designs visual GUI components in a vector design tool and
+  exports them as SVG assets.
+- Store approved SVG assets in `NeuralAmpModeler/resources/img/` with
+  descriptive `DualNAM-*` filenames.
+- Prefer rendering those SVG assets directly in iPlug2 controls instead of
+  recreating panels, knobs, switches, meters, selector bars, icons, or other
+  artwork with hand-coded C++ drawing primitives.
+- Use C++ for behavior and integration: positioning, parameter binding, dynamic
+  text labels and values, knob rotation, switch state, meter level repetition,
+  file-browser behavior, enable/disable state, and layout grouping.
+- Keep reusable DualNAM-owned GUI behavior in project controls such as labeled
+  SVG knobs, SVG switches, selector controls, and dynamic SVG meters.
+- When a component should change visually, update or replace the SVG asset
+  first; change C++ drawing code only when runtime behavior cannot be expressed
+  by positioning, transforming, or repeating existing SVG assets.
+- Normalize exported SVGs only when needed for predictable runtime scaling,
+  cropping, or coordinate handling, and document the reason in the change
+  report.
+- Keep source-level GUI assertions updated when adding assets or changing layout
+  contracts, but leave final visual approval to the product owner.
+
 ## Code design for agent readability
 
 - Give each function one job and each module one responsibility.
