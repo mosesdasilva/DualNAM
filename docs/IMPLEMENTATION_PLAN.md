@@ -264,8 +264,9 @@ For fast local troubleshooting, use the dev-only standalone app workflow:
 ```
 
 This builds the existing `macOS-APP` scheme with `APP_PATH` overridden to
-`/tmp/DualNAMStandaloneApps` by default, verifies the produced app bundle, and
-opens `/tmp/DualNAMStandaloneApps/DualNAM.app`. Use it for quick GUI,
+`NeuralAmpModeler/build-mac/StandaloneApps` by default, verifies the produced
+app bundle, and opens
+`NeuralAmpModeler/build-mac/StandaloneApps/DualNAM.app`. Use it for quick GUI,
 model-loading, file-browser, parameter-interaction, basic audio-I/O, and crash
 reproduction work. It does not validate plug-in scanning, AU/VST3 state
 restore, automation, channel-layout negotiation, plug-in identifiers, or Gig

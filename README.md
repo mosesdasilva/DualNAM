@@ -120,9 +120,9 @@ app:
 ```
 
 This uses the existing `macOS-APP` scheme and writes the app to
-`/tmp/DualNAMStandaloneApps/DualNAM.app` by default, leaving the supported
-VST3/AUv2 install locations untouched. Use `--no-open` for build-only checks,
-`--release` for a Release standalone build, and `--clean` to remove the
+`NeuralAmpModeler/build-mac/StandaloneApps/DualNAM.app` by default, leaving the
+supported VST3/AUv2 install locations untouched. Use `--no-open` for build-only
+checks, `--release` for a Release standalone build, and `--clean` to remove the
 standalone app output and derived data before rebuilding.
 
 The standalone app is a speed tool for GUI iteration, model-loading checks,

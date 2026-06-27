@@ -52,7 +52,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 derived_data_path=${DERIVED_DATA_PATH:-/tmp/DualNAMStandaloneDerivedData}
-app_path=${DUALNAM_STANDALONE_APP_PATH:-/tmp/DualNAMStandaloneApps}
+app_path=${DUALNAM_STANDALONE_APP_PATH:-$repo_root/NeuralAmpModeler/build-mac/StandaloneApps}
 app="$app_path/DualNAM.app"
 app_binary="$app/Contents/MacOS/DualNAM"
 info_plist="$app/Contents/Info.plist"

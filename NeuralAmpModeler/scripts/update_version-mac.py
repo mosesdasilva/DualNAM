@@ -243,11 +243,11 @@ def main():
         macOSapp["CFBundleVersion"] = CFBundleVersion
         macOSapp["CFBundleShortVersionString"] = CFBundleVersion
         macOSapp["LSMinimumSystemVersion"] = LSMinimumSystemVersion
-        macOSapp["CFBundlePackageType"] = CFBundlePackageType
+        macOSapp["CFBundlePackageType"] = "APPL"
         macOSapp["CFBundleSignature"] = config["PLUG_UNIQUE_ID"]
         macOSapp["CSResourcesFileMapped"] = CSResourcesFileMapped
         macOSapp["NSPrincipalClass"] = "SWELLApplication"
-        macOSapp["NSMainNibFile"] = config["BUNDLE_NAME"] + "-macOS-MainMenu"
+        macOSapp["NSMainNibFile"] = RESOURCE_BASENAME + "-macOS-MainMenu"
         macOSapp["LSApplicationCategoryType"] = "public.app-category.music"
         macOSapp[
             "NSMicrophoneUsageDescription"
