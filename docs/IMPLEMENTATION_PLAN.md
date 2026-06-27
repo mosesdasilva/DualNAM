@@ -35,9 +35,12 @@ related to the NAMM trade show.
 - If one slot is empty, that output channel is silent. This is safer than
   passing dry guitar on one side.
 - Model A and model B remain hard-panned. No pan or blend control is included.
-- The first version excludes IR loading, EQ, noise gate, model slimming,
-  standalone app, AAX, AUv3, and capture/training. These can be reconsidered
-  after the dual-model plug-in is stable.
+- The first version excludes IR loading, EQ, noise gate, model slimming, a
+  releasable standalone app, AAX, AUv3, and capture/training. These can be
+  reconsidered after the dual-model plug-in is stable.
+- A dev-only standalone app workflow is allowed as a local troubleshooting
+  harness. It must not be treated as a supported release format or as proof of
+  VST3/AUv2 host behavior.
 - “Independent mono” use means a host may route each input and output channel
   separately.
 - A later input-mode switch is planned:
@@ -253,6 +256,31 @@ Expected development output locations are:
 
 - `~/Library/Audio/Plug-Ins/VST3`
 - `~/Library/Audio/Plug-Ins/Components`
+
+For fast local troubleshooting, use the dev-only standalone app workflow:
+
+```sh
+./scripts/run-standalone-macos.sh
+```
+
+This builds the existing `macOS-APP` scheme with `APP_PATH` overridden to
+`/tmp/DualNAMStandaloneApps` by default, verifies the produced app bundle, and
+opens `/tmp/DualNAMStandaloneApps/DualNAM.app`. Use it for quick GUI,
+model-loading, file-browser, parameter-interaction, basic audio-I/O, and crash
+reproduction work. It does not validate plug-in scanning, AU/VST3 state
+restore, automation, channel-layout negotiation, plug-in identifiers, or Gig
+Performer behavior.
+
+Recommended local feedback loop:
+
+```sh
+./scripts/test-routing.sh
+./scripts/run-standalone-macos.sh
+./scripts/verify-baseline-macos.sh
+```
+
+Run the standalone loop while iterating quickly, then run the VST3/AUv2
+verification path before treating a change as host-ready.
 
 ## Risks
 

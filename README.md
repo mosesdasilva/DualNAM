@@ -112,6 +112,24 @@ validator.
 The Xcode target, source class, and plist filenames intentionally retain their
 upstream names for now. Hosts see the unique DualNAM bundle names and IDs.
 
+For fast GUI and manual troubleshooting, build and open the dev-only standalone
+app:
+
+```sh
+./scripts/run-standalone-macos.sh
+```
+
+This uses the existing `macOS-APP` scheme and writes the app to
+`/tmp/DualNAMStandaloneApps/DualNAM.app` by default, leaving the supported
+VST3/AUv2 install locations untouched. Use `--no-open` for build-only checks,
+`--release` for a Release standalone build, and `--clean` to remove the
+standalone app output and derived data before rebuilding.
+
+The standalone app is a speed tool for GUI iteration, model-loading checks,
+file-browser behavior, parameter interaction, basic audio I/O, and crash
+reproduction. It does not replace VST3/AUv2 validation or Gig Performer
+testing.
+
 Run the focused routing tests:
 
 ```sh
@@ -120,6 +138,17 @@ Run the focused routing tests:
 
 This command also checks the doubled editor width and mirrored channel-panel
 structure.
+
+Recommended local feedback loop:
+
+```sh
+./scripts/test-routing.sh
+./scripts/run-standalone-macos.sh
+./scripts/verify-baseline-macos.sh
+```
+
+Use the standalone app for fast manual feedback, then use the VST3/AUv2
+validation path before treating a plug-in change as host-ready.
 
 ## Development approach
 
